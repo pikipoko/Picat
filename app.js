@@ -79,6 +79,15 @@ app.get("/test", (req, res) => {
       });
     });
 });
+/*find test */
+app.get("/find_test", async (req, res) => {
+  // const newImg = new Img();
+  const find_room = await Img.find({ user_room: "room2" });
+  console.log(find_room);
+  res.send(find_room);
+  // console.log(Img.find({ user_room: "room1" } ));
+  // res.send(Img.find({ user_room: "room1" }));
+});
 
 app.get("/", (req, res) => {
   fs.readFile("HTMLPage.html", (error, data) => {
@@ -97,6 +106,7 @@ app.post("/image", upload.single("image"), (req, res, next) => {
     //json {room:roomName, userid: socket.id, imgurl: data.location, }
     const newImg = new Img();
     //값 넣어주기
+    newImg.user_room = "room1";
     newImg.user_id = "유저 id";
     newImg.url = data.location;
     newImg
@@ -106,6 +116,7 @@ app.post("/image", upload.single("image"), (req, res, next) => {
         res.json({
           message: "이미지 생성정보 성공적으로 저장",
           location: data.location,
+          user_room: newImg.user_room,
         });
       })
       .catch((err) => {
