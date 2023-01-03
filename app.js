@@ -48,7 +48,11 @@ app.post("/image", upload.single("image"), function (req, res, next) {
     // var file = './uploads' + req.file.filename;
     console.log(req.file);
     var data = req.file;
-    res.send(data.location);
+    // res.send(data.location);
+    res.send(data);
+
+    /* mongo DB에 id,url 저장하는 코드 추가 필요 */
+    //json {room:roomName, userid: socket.id, imgurl: data.location, }
 } catch (error) {
     console.error(error);
     next(error);
@@ -70,11 +74,12 @@ io.sockets.on("connection", (socket) => {
     socket.on("message", (data) => {
         // console.log(data);
         console.log("server received data :", data);
-        io.sockets.in(roomName).emit("message", data);
-        // io.emit("message", obj); // app2 : 모든 소켓에 메세지를 보냄
+        // io.sockets.in(roomName).emit("message", data);
+        io.emit("message", obj); // app2 : 모든 소켓에 메세지를 보냄
     });
     socket.on("image", (data) => {
-        io.sockets.in(roomName).emit("image", data);
+        // io.sockets.in(roomName).emit("image", data);
+        io.emit("image", data);//모두에게 전송
         console.log(data);
     });
     socket.on("disconnect", () => {
