@@ -17,6 +17,7 @@
       // 변수를 선언합니다.
       var room = prompt('방 이름을 입력하세요.', '');
       var socket = io.connect();
+      
       // 소켓 이벤트를 연결합니다.
       socket.emit('join', room);
 
@@ -51,7 +52,9 @@
           date: new Date().toUTCString()
         });
       });
-      
+
+      // 서버에서 클라이언트로 이미지를 보내줬을 때 
+      // UI로 표현하는 파트
       socket.on('image', function (data) {
         var output = '';
         output += '<li>';
@@ -74,13 +77,14 @@
         });
       });
 
+      // 클라이언트에서 서버로 파일을 보내는 파트
       function uploadFile(){
         var form = $('#uploadForm')[0];
         var formData = new FormData();
         formData.append("image", $("input[name=test]")[0].files[0]);
         var obj = {formData}
         $.ajax({
-          url : 'http://43.200.93.112:5000/image',
+          url : 'http://13.124.233.208:5000/image',
           // url : 'http://127.0.0.1:5000/',
           type : 'POST',
           method: "POST",
@@ -118,7 +122,7 @@
   
   <div data-role="page">
     <div data-role="header">
-      <h1>Socket.io Chat</h1>
+      <h1 id="room">Socket.io Chat</h1>
     </div>
     <div data-role="content">
       <h3>Nick Name</h3>
