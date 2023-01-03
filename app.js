@@ -1,10 +1,11 @@
-/*모듈선언 */
+/* 모듈 선언 */
 const http = require("http");
 const express = require("express");
 const fs = require("fs");
 const upload = require("./config/multer");
 const path = require("path");
-//웹서버 생성
+
+/* 웹서버 생성 */
 const app = express();
 const server = http.createServer(app);
 const io = require("socket.io")(server);
@@ -35,14 +36,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(allowCrossDomain);
 
-/*라우터 구성 */
-// app.get("/", (req, res) => {res.send("Hello World!!! 수민");});
+/* 라우터 구성 */
 app.get("/", (req, res) => {
     fs.readFile("HTMLPage.html", (error, data) => {
         res.writeHead(200, { "Content-Type": "text/html" });
         res.end(data);
     });
 });
+
 app.post("/image", upload.single("image"), function (req, res, next) {
     try {
         // var file = './uploads' + req.file.filename;
@@ -62,26 +63,26 @@ app.post("/image", upload.single("image"), function (req, res, next) {
 io.sockets.on("connection", (socket) => {
     console.log(`Socket connected ${socket.id}`);
 
-    // message
+    // Room 설정
     var roomName = null;
     socket.on("join", (data) => {
         // data는 브라우저에서 보낸 방 아이디
         roomName = data;
-        console.log("roomName - " + roomName);
-        socket.join(data); // 네임스페이스 아래에 존재하는 방에 접속
+        console.log("room : " + roomName);
+        socket.join(data);
+        // 네임스페이스 아래에 존재하는 방에 접속
     });
 
     socket.on("message", (data) => {
-        // console.log(data);
-        console.log("server received data :", data);
+        console.log("received :", data);
         // io.sockets.in(roomName).emit("message", data);
-        io.emit("message", obj); // app2 : 모든 소켓에 메세지를 보냄
+        io.emit("message", data); // 모든 소켓에 메세지를 보냄
     });
     
     socket.on("image", (data) => {
         // io.sockets.in(roomName).emit("image", data);
-        io.emit("image", data); // app2 : 모든 소켓에 메세지를 보냄
-        console.log(data.message);
+        io.emit("image", data); // 모든 소켓에 이미지를 보냄
+        console.log("received :", data.message);
     });
 
     socket.on("disconnect", () => {
