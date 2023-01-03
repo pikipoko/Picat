@@ -4,6 +4,29 @@ const express = require("express");
 const fs = require("fs");
 const upload = require("./config/multer");
 const path = require("path");
+
+/*db 설정*/
+const User = require('./models/User')
+const Img = require('./models/Image')
+const mongoose=require("mongoose");
+mongoose.set('strictQuery', true);
+mongoose.connect(process.env.MONGODB_URL,
+{
+    dbName: "picat", // 접속할 데이터베이스
+},
+(error) => {if (error) {
+    console.error("MongoDB 연결 에러", error);
+    } else {
+    console.log("MongoDB 연결 성공");
+    }
+}
+);
+
+/*서버 리스닝 */
+// server.listen(port, (err) => {
+//     console.log(`서버가 실행됩니다. http://localhost:${port}`);
+// });
+
 //웹서버 생성
 const app = express();
 const server = http.createServer(app);
@@ -37,6 +60,29 @@ app.use(allowCrossDomain);
 
 /*라우터 구성 */
 // app.get("/", (req, res) => {res.send("Hello World!!! 수민");});
+app.get("/test",(req,res)=>{
+    const newUser=new User();
+    //값 넣어주기
+    newUser.email="picat@abc.123";
+    newUser.name="picat";
+    newUser.age=25;
+    newUser.save()//실제로 저장된 유저값 불러옴
+    .then((user)=>{
+        console.log(user);
+        res.json({
+            message:'유저 성공적으로 생성됨',
+            email :newUser.email,
+            name : newUser.name,
+            age : newUser.age,
+        })
+    })
+    .catch((err)=>{
+        res.json({
+            message:'User 생성 실패'
+        })
+    })
+})
+
 app.get("/", (req, res) => {
   fs.readFile("HTMLPage.html", (error, data) => {
     res.writeHead(200, { "Content-Type": "text/html" });
@@ -49,10 +95,26 @@ app.post("/image", upload.single("image"), function (req, res, next) {
     console.log(req.file);
     var data = req.file;
     // res.send(data.location);
-    res.send(data);
-
+    // res.send(data);
     /* mongo DB에 id,url 저장하는 코드 추가 필요 */
     //json {room:roomName, userid: socket.id, imgurl: data.location, }
+    const newImg=new Img();
+    //값 넣어주기
+    newImg.user_id="유저 id"
+    newImg.url=data.location
+    newImg.save()//실제로 저장된 유저값 불러옴
+    .then((user)=>{
+        console.log(user);
+        res.json({
+            message:'이미지 생성정보 성공적으로 저장',
+            url:data.location
+        })
+    })
+    .catch((err)=>{
+        res.json({
+            message:'이미지 생성정보 저장실패'
+        })
+    })
 } catch (error) {
     console.error(error);
     next(error);
@@ -89,7 +151,7 @@ io.sockets.on("connection", (socket) => {
 });
 
 /*생성된 서버가 포트를 리스닝 */
-server.listen(port, () => {
+server.listen(port, (err) => {
     console.log(`서버가 실행됩니다. http://localhost:${port}`);
 });
 // app.listen(port, () => console.log("Express server listening on PORT" + port));
