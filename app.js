@@ -95,7 +95,7 @@ app.post("/image", upload.single("image"), function (req, res, next) {
     console.log(req.file);
     var data = req.file;
     // res.send(data.location);
-    res.send(data);
+    // res.send(data);
     /* mongo DB에 id,url 저장하는 코드 추가 필요 */
     //json {room:roomName, userid: socket.id, imgurl: data.location, }
     const newImg=new Img();
@@ -106,7 +106,8 @@ app.post("/image", upload.single("image"), function (req, res, next) {
     .then((user)=>{
         console.log(user);
         res.json({
-            message:'이미지 생성정보 성공적으로 저장'
+            message:'이미지 생성정보 성공적으로 저장',
+            url:data.location
         })
     })
     .catch((err)=>{
