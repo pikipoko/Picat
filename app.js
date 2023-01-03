@@ -1,4 +1,4 @@
-/*모듈선언 */
+/* 모듈 선언 */
 const http = require("http");
 const express = require("express");
 const fs = require("fs");
@@ -24,7 +24,6 @@ mongoose.connect(
   }
 );
 
-//웹서버 생성
 const app = express();
 const server = http.createServer(app);
 const io = require("socket.io")(server);
@@ -90,11 +89,12 @@ app.get("/find_test", async (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  fs.readFile("HTMLPage.html", (error, data) => {
-    res.writeHead(200, { "Content-Type": "text/html" });
-    res.end(data);
-  });
+    fs.readFile("HTMLPage.html", (error, data) => {
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end(data);
+    });
 });
+
 app.post("/image", upload.single("image"), (req, res, next) => {
   try {
     // var file = './uploads' + req.file.filename;
