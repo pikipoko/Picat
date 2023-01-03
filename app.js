@@ -74,12 +74,13 @@ io.sockets.on("connection", (socket) => {
     socket.on("message", (data) => {
         // console.log(data);
         console.log("server received data :", data);
-        io.sockets.in(roomName).emit("message", data);
-        // io.emit("message", obj); // app2 : 모든 소켓에 메세지를 보냄
+        // io.sockets.in(roomName).emit("message", data);
+        io.emit("message", obj); // app2 : 모든 소켓에 메세지를 보냄
     });
-
+    
     socket.on("image", (data) => {
-        io.sockets.in(roomName).emit("image", data);
+        // io.sockets.in(roomName).emit("image", data);
+        io.emit("image", data); // app2 : 모든 소켓에 메세지를 보냄
         console.log(data.message);
     });
 
