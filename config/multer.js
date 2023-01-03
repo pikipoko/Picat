@@ -9,9 +9,7 @@ const { S3Client } = require('@aws-sdk/client-s3');
 const s3=new S3Client({
     credentials:{
         accessKeyId:process.env.S3_ACCESS_KEY_ID,
-        // accessKeyId:"AKIAQ3BFWEUQWQWV5HW2",
         secretAccessKey:process.env.S3_SECRET_ACCESS_KEY
-        // secretAccessKey:"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"
     },
     region:'ap-northeast-2'
 })
