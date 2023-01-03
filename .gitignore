@@ -4,3 +4,5 @@ node_modules
 .env
 /00_test
 /00_image_manager
+app2.js
+app copy.js
