@@ -38,21 +38,24 @@ app.use(allowCrossDomain);
 /*라우터 구성 */
 // app.get("/", (req, res) => {res.send("Hello World!!! 수민");});
 app.get("/", (req, res) => {
-  fs.readFile("HTMLPage.html", (error, data) => {
-    res.writeHead(200, { "Content-Type": "text/html" });
-    res.end(data);
-  });
+    fs.readFile("HTMLPage.html", (error, data) => {
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end(data);
+    });
 });
 app.post("/image", upload.single("image"), function (req, res, next) {
     try {
-    // var file = './uploads' + req.file.filename;
-    console.log(req.file);
-    var data = req.file;
-    res.send(data.location);
-} catch (error) {
-    console.error(error);
-    next(error);
-}
+        // var file = './uploads' + req.file.filename;
+        console.log(req.file);
+        var data = req.file;
+        // res.send(data.location);
+        res.send(data);
+
+        // mongodb에 data.location를 저장
+    } catch (error) {
+        console.error(error);
+        next(error);
+    }
 });
 
 /* 소켓 통신 */
@@ -64,19 +67,22 @@ io.sockets.on("connection", (socket) => {
     socket.on("join", (data) => {
         // data는 브라우저에서 보낸 방 아이디
         roomName = data;
+        console.log("roomName - " + roomName);
         socket.join(data); // 네임스페이스 아래에 존재하는 방에 접속
     });
-    
+
     socket.on("message", (data) => {
         // console.log(data);
         console.log("server received data :", data);
         io.sockets.in(roomName).emit("message", data);
         // io.emit("message", obj); // app2 : 모든 소켓에 메세지를 보냄
     });
+
     socket.on("image", (data) => {
         io.sockets.in(roomName).emit("image", data);
-        console.log(data);
+        console.log(data.message);
     });
+
     socket.on("disconnect", () => {
         // 클라이언트의 연결이 끊어졌을 때 호출
         console.log(`Socket disconnected : ${socket.id}`);
