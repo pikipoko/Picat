@@ -1,3 +1,6 @@
 package.json
 package-lock.json
 node_modules
+.env
+/00_test
+/00_image_manager
