@@ -79,10 +79,11 @@ app.get("/test", (req, res) => {
     });
 });
 /*find test */
-app.get("/find_test", async (req, res) => {
+app.get("/view", async (req, res) => {
   // const newImg = new Img();
-  const find_room = await Img.find({ user_room: "room2" });
+  const find_room = await Img.find({ user_room: "room1" },{_id:0, url:1}).exec();
   console.log(find_room);
+
   res.send(find_room);
   // console.log(Img.find({ user_room: "room1" } ));
   // res.send(Img.find({ user_room: "room1" }));
