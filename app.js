@@ -102,7 +102,7 @@ mongoose
         // res.send(data.location);
         // res.send(data);
         /* mongo DB에 id,url 저장하는 코드 추가 필요 */
-        //json {room:roomName, userid: socket.id, imgurl: data.location, }
+        //json {room:roomIdx, userid: socket.id, imgurl: data.location, }
         const newImg = new Img();
         //값 넣어주기
         newImg.user_room = "room1";
@@ -134,11 +134,11 @@ mongoose
       console.log(`Socket connected ${socket.id}`);
 
       // message
-      var roomName = null;
+      var roomIdx = null;
       socket.on("join", async (data) => {
         // data는 브라우저에서 보낸 방 아이디
         console.log("user joined");
-        roomName = data;
+        roomIdx = data;
         socket.join(data); // 네임스페이스 아래에 존재하는 방에 접속
         const find_room = await Img.find(
           { user_room: "room1" },
@@ -149,13 +149,13 @@ mongoose
           img_cnt: find_room.length,
         };
         io.to(socket.id).emit("join", emit_data);
-
         console.log(emit_data);
       });
-      socket.on("image", (data) => {
-        // io.sockets.in(roomName).emit("image", data);
-        io.emit("image", data); //모두에게 전송
-        console.log(data);
+      socket.on("image", (img_info) => {
+        // io.sockets.in(roomIdx).emit("image", img_info);
+        io.emit("image", Object.values(img_info)[0]); //모두에게 전송
+        console.log(typeof Object.values(img_info)[0]);
+        console.log(Object.values(img_info)[0]);
       });
       socket.on("disconnect", () => {
         // 클라이언트의 연결이 끊어졌을 때 호출
