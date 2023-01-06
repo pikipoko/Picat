@@ -99,34 +99,51 @@ mongoose
             }
         });
 
-        app.post("/app/users/kakao", (req, res, next) => {
-            const newUser = new User();
-            const userInfo = req.body;
+        app.post("/app/users/kakao", async (req, res, next) => {
+            // data는 브라우저에서 보낸 방 아이디
 
-            console.log(userInfo.nickname);
-            newUser.nickname = userInfo.nickname;
-            newUser.picture = userInfo.picture;
-            newUser.email = userInfo.email;
-            newUser.total_count = userInfo.total_count;
-            newUser.elements = [];
-            for (let i = 0; i < userInfo.total_count; i++) {
-                newUser.elements.push({
-                    id: userInfo.elements[i].id,
-                    uuid: userInfo.elements[i].uuid,
-                    favorite: userInfo.elements[i].favorite,
-                    profile_nickname: userInfo.elements[i].profile_nickname,
-                    profile_thumbnail: userInfo.elements[i].profile_thumbnail,
-                });
-            }
-
-            console.log(newUser);
-            newUser.save().then((user) => {
-                console.log(user);
+            const find_user = await User.find({ email: req.body.email }).exec();
+            // 1개라도 있다면, 바로 res.send
+            if (find_user.length !== 0) {
                 res.json({
-                    message: "유저 성공적으로 DB 저장 및 생성됨",
-                    isSuccess: true,
+                    message: "유저가 이미 등록됨",
+                    isSuccess: false,
                 });
-            });
+            } else {
+                const newUser = new User();
+                const userInfo = req.body;
+
+                newUser.nickname = userInfo.nickname;
+                newUser.picture = userInfo.picture;
+                newUser.email = userInfo.email;
+                newUser.total_count = userInfo.total_count;
+                newUser.elements = [];
+                for (let i = 0; i < userInfo.total_count; i++) {
+                    newUser.elements.push({
+                        id: userInfo.elements[i].id,
+                        uuid: userInfo.elements[i].uuid,
+                        favorite: userInfo.elements[i].favorite,
+                        profile_nickname: userInfo.elements[i].profile_nickname,
+                        profile_thumbnail:
+                            userInfo.elements[i].profile_thumbnail,
+                    });
+                }
+
+                newUser
+                    .save()
+                    .then((user) => {
+                        res.json({
+                            message: "유저 정보 DB 저장 성공",
+                            isSuccess: true,
+                        });
+                    })
+                    .catch((err) => {
+                        res.json({
+                            message: "유저 정보 DB 저장 실패",
+                            isSuccess: false,
+                        });
+                    });
+            }
         });
 
         /* 소켓 통신 */
