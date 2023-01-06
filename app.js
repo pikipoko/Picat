@@ -81,7 +81,7 @@ mongoose
           newImg.user_room = "room1";
           newImg.user_id = "유저 id";
           newImg.url = data[i].location;
-          result[i] = { url: data[i].location };
+          result[i] = data[i].location;
           await newImg
             .save() //실제로 저장된 유저값 불러옴
             .then((user) => {
@@ -93,9 +93,8 @@ mongoose
               });
             });
         }
-        console.log(result);
         res.json({
-          img_list: result,
+          url: result,
           img_cnt: i,
         });
       } catch (error) {
@@ -162,22 +161,21 @@ mongoose
         console.log(data);
         roomIdx = data;
         socket.join(data); // 네임스페이스 아래에 존재하는 방에 접속
-        const find_room = await Img.find(
+        const find_images = await Img.find(
           { user_room: "room1" },
           { _id: 0, url: 1 }
         ).exec();
         const emit_data = {
-          img_list: find_room,
-          img_cnt: find_room.length,
+          img_list: find_images,
+          img_cnt: find_images.length,
         };
         io.to(socket.id).emit("join", emit_data);
         console.log(emit_data);
       });
-      socket.on("image", (img_list) => {
-        console.log(img_list);
+      socket.on("image", (images) => {
         // io.sockets.in(roomIdx).emit("image", img_list);
         // io.emit("image", Object.values(img_list)[0]); //모두에게 전송
-        io.emit("image", img_list); //모두에게 전송
+        io.emit("image", images); //모두에게 전송
       });
       socket.on("disconnect", () => {
         // 클라이언트의 연결이 끊어졌을 때 호출
