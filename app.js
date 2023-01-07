@@ -105,11 +105,14 @@ mongoose
 
     app.post("/app/users/kakao", async (req, res, next) => {
       // data는 브라우저에서 보낸 방 아이디
-
-      const find_user = await User.deleteOne({ email: req.body.email });
+      console.log("==가입===");
+      console.log(req.body);
+      console.log(req.body.elements[0]);
+      await User.deleteOne({ email: req.body.email });
       const newUser = new User();
       const userInfo = req.body;
 
+      newUser.id = userInfo.id;
       newUser.nickname = userInfo.nickname;
       newUser.picture = userInfo.picture;
       newUser.email = userInfo.email;
