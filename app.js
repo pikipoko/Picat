@@ -81,7 +81,7 @@ mongoose
           newImg.user_room = "room1";
           newImg.user_id = "유저 id";
           newImg.url = data[i].location;
-          result[i] = { url: data[i].location };
+          result[i] = data[i].location;
           await newImg
             .save() //실제로 저장된 유저값 불러옴
             .then((user) => {
@@ -94,7 +94,7 @@ mongoose
             });
         }
         res.json({
-          img_list: result,
+          url: result,
           img_cnt: i,
         });
       } catch (error) {
