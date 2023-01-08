@@ -83,26 +83,25 @@ let makeDescription = async function (images) {
   }
 };
 
-let getDescriptorsFromDB_new = async function (image, id) {
+let getDescriptorsFromDB = async function (image, id) {
   // Get all the face data from mongodb and loop through each of them to read the data
   const user = await User.findOne({ id: id });
   let faces = [];
   if (!user) return null;
 
   for (let i = 0; i < user.elements.length; i++) {
-    let friend_descriptions = await User.findOne(
-      { id: user.elements[i].id },
-      "descriptions"
-    );
-    for (let j = 0; j < friend_descriptions.length; j++) {
-      friend_descriptions[j] = new Float32Array(
-        Object.values(friend_descriptions[j])
+    let friend = await User.findOne({ id: user.elements[i].id });
+    if (friend) {
+      for (let j = 0; j < friend.descriptions.length; j++) {
+        friend.descriptions[j] = new Float32Array(
+          Object.values(friend.descriptions[j])
+        );
+      }
+      faces[i] = new faceapi.LabeledFaceDescriptors(
+        friend.email,
+        friend.descriptions
       );
     }
-    faces[i] = new faceapi.LabeledFaceDescriptors(
-      user.elements[i].id,
-      friend_descriptions
-    );
   }
   // Load face matcher to find the matching face
   const faceMatcher = new faceapi.FaceMatcher(faces, 0.55);
@@ -126,52 +125,6 @@ let getDescriptorsFromDB_new = async function (image, id) {
   );
   return results;
 };
-
-let getDescriptorsFromDB = async function (image) {
-  // Get all the face data from mongodb and loop through each of them to read the data
-  let faces = await Face.find();
-  for (i = 0; i < faces.length; i++) {
-    // Change the face data descriptors from Objects to Float32Array type
-    for (j = 0; j < faces[i].descriptions.length; j++) {
-      faces[i].descriptions[j] = new Float32Array(
-        Object.values(faces[i].descriptions[j])
-      );
-    }
-    // Turn the DB face docs to
-    faces[i] = new faceapi.LabeledFaceDescriptors(
-      faces[i].label,
-      faces[i].descriptions
-    );
-  }
-
-  // Load face matcher to find the matching face
-  const faceMatcher = new faceapi.FaceMatcher(faces, 0.55);
-
-  // Read the image using canvas or other method
-  const img = await canvas.loadImage(image);
-  let temp = faceapi.createCanvasFromMedia(img);
-
-  // Process the image for the model
-  const displaySize = { width: img.width, height: img.height };
-  faceapi.matchDimensions(temp, displaySize);
-
-  // Find matching faces
-  const detections = await faceapi
-    .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks(useTinyModel)
-    .withFaceDescriptors();
-  const resizedDetections = faceapi.resizeResults(detections, displaySize);
-  const results = resizedDetections.map((d) =>
-    faceMatcher.findBestMatch(d.descriptor)
-  );
-  return results;
-};
-
-app.post("/check-face", async (req, res) => {
-  const File = req.files.File.tempFilePath;
-  let result = await getDescriptorsFromDB(File);
-  res.json({ result });
-});
 
 /* 라우터 구성 */
 app.post("/image", upload.array("image"), async (req, res, next) => {
@@ -190,7 +143,7 @@ app.post("/image", upload.array("image"), async (req, res, next) => {
       await newImg
         .save() //실제로 저장된 유저값 불러옴
         .then(async (user) => {
-          const DescriptorsFromDB = await getDescriptorsFromDB_new(
+          const DescriptorsFromDB = await getDescriptorsFromDB(
             data[img_cnt].location,
             req.body.id
           );
