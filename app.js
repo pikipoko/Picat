@@ -4,12 +4,11 @@ const express = require("express");
 const fs = require("fs");
 const upload = require("./config/multer");
 const path = require("path");
+const mongoose = require("mongoose");
 
 const User = require("./models/User");
 const Img = require("./models/Image");
 const Face = require("./models/Face");
-
-const mongoose = require("mongoose");
 
 const app = express();
 const server = http.createServer(app);
@@ -20,7 +19,7 @@ const port = 5000;
 const faceapi = require("face-api.js");
 const { Canvas, Image } = require("canvas");
 const canvas = require("canvas");
-const fileUpload = require("express-fileupload");
+// const fileUpload = require("express-fileupload");
 faceapi.env.monkeyPatch({ Canvas, Image });
 
 /*http request 에러 방지: Origin [링크] is not allowed by Access-Control-Allow-Origin.*/
@@ -47,13 +46,16 @@ var allowCrossDomain = function (req, res, next) {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(allowCrossDomain);
-app.use(fileUpload({ useTempFiles: true }));
+// app.use(fileUpload({ useTempFiles: true }));
 
-// face-api 관련 함수 선언
+// face-api 모델 로드
 var LoadModels = async function () {
   await faceapi.nets.faceRecognitionNet.loadFromDisk(__dirname + "/weights");
   await faceapi.nets.faceLandmark68TinyNet.loadFromDisk(__dirname + "/weights");
   await faceapi.nets.tinyFaceDetector.loadFromDisk(__dirname + "/weights");
+  // await faceapi.nets.faceRecognitionNet.loadFromDisk(__dirname + "/weights");
+  // await faceapi.nets.faceLandmark68Net.loadFromDisk(__dirname + "/weights");
+  // await faceapi.nets.ssdMobilenetv1.loadFromDisk(__dirname + "/weights");
 };
 LoadModels();
 
@@ -68,9 +70,10 @@ var uploadLabeledImages = async function (images, label) {
       // Read each face and save the face descriptions in the descriptions array
       const detections = await faceapi
         .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+        // .detectSingleFace(img)
         .withFaceLandmarks(useTinyModel)
         .withFaceDescriptor();
-      console.log(`[${i}]-[${detections}]`);
+      console.log(`[${i}]-${detections}`);
       if (detections) descriptions.push(detections.descriptor);
     }
 
@@ -112,7 +115,7 @@ var getDescriptorsFromDB = async function (image) {
   }
 
   // Load face matcher to find the matching face
-  const faceMatcher = new faceapi.FaceMatcher(faces, 0.6);
+  const faceMatcher = new faceapi.FaceMatcher(faces, 0.55);
   // faceapi.TinyFaceDetector();
   // Read the image using canvas or other method
   const img = await canvas.loadImage(image);
@@ -124,6 +127,7 @@ var getDescriptorsFromDB = async function (image) {
   // Find matching faces
   const detections = await faceapi
     .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
+    // .detectAllFaces(img)
     .withFaceLandmarks(useTinyModel)
     .withFaceDescriptors();
   const resizedDetections = faceapi.resizeResults(detections, displaySize);
@@ -133,9 +137,11 @@ var getDescriptorsFromDB = async function (image) {
   return results;
 };
 
-/**얼굴인식 라우터 구성 */
+/* 얼굴인식 라우터 구성 */
 app.post("/post-face", async (req, res) => {
   let Files = [];
+  console.log(req.body);
+  console.log(req.files);
   if (req.files.File1) Files.push(req.files.File1.tempFilePath);
   if (req.files.File2) Files.push(req.files.File2.tempFilePath);
   if (req.files.File3) Files.push(req.files.File3.tempFilePath);
@@ -146,34 +152,18 @@ app.post("/post-face", async (req, res) => {
   } else {
     res.json({ message: "Something went wrong, please try again." });
   }
-  console.log("POST : post-face finished");
 });
 
 app.post("/check-face", async (req, res) => {
   const File = req.files.File.tempFilePath;
   let result = await getDescriptorsFromDB(File);
   res.json({ result });
-  console.log("POST : check-face finished");
 });
 
-/*라우터 구성 */
-app.get("/view", async (req, res) => {
-  const find_room = await Img.find(
-    { user_room: "room1" },
-    { _id: 0, url: 1 }
-  ).exec();
-  console.log(find_room);
-
-  res.send(find_room);
-});
-
-app.get("/", (req, res) => {
-  fs.readFile("HTMLPage.html", (error, data) => {
-    res.writeHead(200, { "Content-Type": "text/html" });
-    res.end(data);
-  });
-});
-
+/* 라우터 구성 */
+/**
+ * 이미지(list) 업로드
+ */
 app.post("/image", upload.array("image"), async (req, res, next) => {
   try {
     // var file = './uploads' + req.file.filename;
@@ -181,7 +171,7 @@ app.post("/image", upload.array("image"), async (req, res, next) => {
     var data = req.files;
     var result = [];
     let img_cnt = 0;
-    for (; img_cnt < data.length; img_cnt++) {
+    for (let i = 0; i < data.length; i++) {
       /* mongo DB에 id,url 저장하는 코드 추가 필요 */
       const newImg = new Img();
       //값 넣어주기
@@ -189,20 +179,28 @@ app.post("/image", upload.array("image"), async (req, res, next) => {
       newImg.user_id = "유저 id";
       newImg.url = data[img_cnt].location;
       result[img_cnt] = data[img_cnt].location;
+      var check_result = [];
       await newImg
         .save() //실제로 저장된 유저값 불러옴
         .then((user) => {
           console.log(`[${img_cnt}] - db저장 성공`);
+          check_result.push(getDescriptorsFromDB(data[img_cnt].location));
+          if (check_result.length > 0) {
+            console.log("같은 사람인 것처럼 보임", check_result);
+            // 친구 초대 링크 보냄.
+          }
+          img_cnt++;
         })
         .catch((err) => {
           res.json({
-            message: "이미지 생성정보 저장실패",
+            message: "이미지 생성정보 db저장실패",
           });
         });
     }
     res.json({
       url: result,
       img_cnt: img_cnt,
+      result: check_result,
     });
   } catch (error) {
     console.error(error);
@@ -210,6 +208,10 @@ app.post("/image", upload.array("image"), async (req, res, next) => {
   }
 });
 
+/**
+ * 카카오톡 로그인, 친구 목록 조회 후
+ * 유저 정보, 친구목록 정보 모두 DB 저장
+ */
 app.post("/app/users/kakao", async (req, res, next) => {
   // data는 브라우저에서 보낸 방 아이디
   await User.deleteOne({ email: req.body.email });
@@ -274,6 +276,7 @@ io.sockets.on("connection", (socket) => {
   socket.on("image", (images) => {
     // io.sockets.in(roomIdx).emit("image", img_list);
     // io.emit("image", Object.values(img_list)[0]); //모두에게 전송
+
     io.emit("image", images); //모두에게 전송
   });
   socket.on("disconnect", () => {
