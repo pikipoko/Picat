@@ -4,3 +4,7 @@ node_modules
 .env
 
 00_test/
+
+# face-api
+tmp
+weights
