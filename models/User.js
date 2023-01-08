@@ -9,6 +9,10 @@ const userSchema = new Schema(
     picture: String,
     email: String,
     total_count: Number,
+    descriptions: {
+      type: Array,
+      required: true,
+    },
     elements: [
       new Schema({
         id: Number,
