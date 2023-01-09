@@ -8,6 +8,7 @@ const userSchema = new Schema(
     nickname: String,
     picture: String,
     email: String,
+    roomIdx: Number,
     total_count: Number,
     descriptions: {
       type: Array,
