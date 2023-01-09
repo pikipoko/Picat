@@ -1,27 +1,25 @@
 /* 모듈 선언 */
 const http = require("http");
 const express = require("express");
-const fs = require("fs");
 const upload = require("./config/multer");
-const path = require("path");
 const mongoose = require("mongoose");
 
 /* Models */
 const User = require("./models/User");
 const Img = require("./models/Image");
-const Face = require("./models/Face");
 
 const app = express();
 const server = http.createServer(app);
 const io = require("socket.io")(server);
 const port = 5000;
 
-// face-api.js 관련 모듈 선언
-const faceapi = require("face-api.js");
-const { Canvas, Image } = require("canvas");
-const canvas = require("canvas");
-// const fileUpload = require("express-fileupload");
-faceapi.env.monkeyPatch({ Canvas, Image });
+const {
+  LoadModels,
+  makeDescription,
+  getDescriptorsFromDB,
+} = require("./face_api");
+
+LoadModels();
 
 /*http request 에러 방지: Origin [링크] is not allowed by Access-Control-Allow-Origin.*/
 let allowCrossDomain = function (req, res, next) {
@@ -48,83 +46,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(allowCrossDomain);
 // app.use(fileUpload({ useTempFiles: true }));
-
-// face-api 모델 로드
-let LoadModels = async function () {
-  await faceapi.nets.faceRecognitionNet.loadFromDisk(__dirname + "/weights");
-  await faceapi.nets.faceLandmark68TinyNet.loadFromDisk(__dirname + "/weights");
-  await faceapi.nets.tinyFaceDetector.loadFromDisk(__dirname + "/weights");
-  // await faceapi.nets.faceRecognitionNet.loadFromDisk(__dirname + "/weights");
-  // await faceapi.nets.faceLandmark68Net.loadFromDisk(__dirname + "/weights");
-  // await faceapi.nets.ssdMobilenetv1.loadFromDisk(__dirname + "/weights");
-};
-LoadModels();
-
-const useTinyModel = true;
-
-let makeDescription = async function (images) {
-  try {
-    const descriptions = [];
-    // Loop through the images
-    const img = await canvas.loadImage(images);
-    // Read each face and save the face descriptions in the descriptions array
-    const detections = await faceapi
-      .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-      .withFaceLandmarks(useTinyModel)
-      .withFaceDescriptor();
-    // console.log(typeof detections);
-    if (detections) descriptions.push(detections.descriptor);
-
-    // 얼굴을 인식하지 못하면 저장X
-    return descriptions;
-  } catch (error) {
-    console.log(error);
-    return error;
-  }
-};
-
-let getDescriptorsFromDB = async function (image, id) {
-  // Get all the face data from mongodb and loop through each of them to read the data
-  const user = await User.findOne({ id: id });
-  let faces = [];
-  if (!user) return null;
-
-  for (let i = 0; i < user.elements.length; i++) {
-    let friend = await User.findOne({ id: user.elements[i].id });
-    if (friend) {
-      for (let j = 0; j < friend.descriptions.length; j++) {
-        friend.descriptions[j] = new Float32Array(
-          Object.values(friend.descriptions[j])
-        );
-      }
-      faces[i] = new faceapi.LabeledFaceDescriptors(
-        friend.email,
-        friend.descriptions
-      );
-    }
-  }
-  // Load face matcher to find the matching face
-  const faceMatcher = new faceapi.FaceMatcher(faces, 0.55);
-
-  // Read the image using canvas or other method
-  const img = await canvas.loadImage(image);
-  let temp = faceapi.createCanvasFromMedia(img);
-
-  // Process the image for the model
-  const displaySize = { width: img.width, height: img.height };
-  faceapi.matchDimensions(temp, displaySize);
-
-  // Find matching faces
-  const detections = await faceapi
-    .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks(useTinyModel)
-    .withFaceDescriptors();
-  const resizedDetections = faceapi.resizeResults(detections, displaySize);
-  const results = resizedDetections.map((d) =>
-    faceMatcher.findBestMatch(d.descriptor)
-  );
-  return results;
-};
 
 /* 라우터 구성 */
 app.post("/image", upload.array("image"), async (req, res, next) => {
@@ -290,7 +211,7 @@ mongoose
 
     /*생성된 서버가 포트를 리스닝 */
     server.listen(port, (err) => {
-      console.log(`서버가 실행됩니다. http://localhost:${port}`);
+      console.log(`서버가 실행됩니다...${port}`);
     });
   })
   .catch((err) => {
