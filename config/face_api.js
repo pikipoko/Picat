@@ -4,7 +4,7 @@ const { Canvas, Image } = require("canvas");
 const canvas = require("canvas");
 faceapi.env.monkeyPatch({ Canvas, Image });
 
-const User = require("./models/User");
+const User = require("../models/User");
 
 const useTinyModel = true;
 // face-api 모델 로드
@@ -12,29 +12,32 @@ let LoadModels = async function () {
   await faceapi.nets.faceRecognitionNet.loadFromDisk(__dirname + "/weights");
   await faceapi.nets.faceLandmark68TinyNet.loadFromDisk(__dirname + "/weights");
   await faceapi.nets.tinyFaceDetector.loadFromDisk(__dirname + "/weights");
-  // await faceapi.nets.faceRecognitionNet.loadFromDisk(__dirname + "/weights");
-  // await faceapi.nets.faceLandmark68Net.loadFromDisk(__dirname + "/weights");
-  // await faceapi.nets.ssdMobilenetv1.loadFromDisk(__dirname + "/weights");
 };
 
 let makeDescription = async function (images) {
   try {
     const descriptions = [];
     // Loop through the images
+
     const img = await canvas.loadImage(images);
+    console.log("img : ", img);
+    if (!img) {
+      console.log("이미지 파일 분석 불가");
+      return null;
+    }
     // Read each face and save the face descriptions in the descriptions array
     const detections = await faceapi
       .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
       .withFaceLandmarks(useTinyModel)
       .withFaceDescriptor();
-    // console.log(typeof detections);
+
+    // 얼굴 인식X -> 저장X
     if (detections) descriptions.push(detections.descriptor);
 
-    // 얼굴을 인식하지 못하면 저장X
     return descriptions;
   } catch (error) {
     console.log(error);
-    return error;
+    return [];
   }
 };
 
