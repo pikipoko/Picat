@@ -53,7 +53,7 @@ let getDescriptorsFromDB = async function (image, id) {
         );
       }
       faces[i] = new faceapi.LabeledFaceDescriptors(
-        friend.email,
+        `${friend.id}`,
         friend.descriptions
       );
     }
@@ -78,7 +78,10 @@ let getDescriptorsFromDB = async function (image, id) {
   const results = resizedDetections.map((d) =>
     faceMatcher.findBestMatch(d.descriptor)
   );
-  return results;
+  let rtn_ids = [];
+  for (let i = 0; i < results.length; i++)
+    rtn_ids[i] = parseInt(results[i]._label);
+  return rtn_ids;
 };
 
 module.exports = { LoadModels, makeDescription, getDescriptorsFromDB };
