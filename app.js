@@ -158,6 +158,8 @@ app.post("/image", upload.array("image"), async (req, res, next) => {
           console.error(err);
         });
     }
+    console.log("image 업로드!");
+    console.log(check_result);
     res.json({
       url: result,
       img_cnt: img_cnt,
