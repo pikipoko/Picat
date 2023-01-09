@@ -11,7 +11,8 @@ let upload_image = async function (req, res, next) {
     for (let i = 0; i < data.length; i++) {
       /* mongo DB에 id, url 저장하는 코드 추가 필요 */
       const newImg = new Img();
-      let roomIdx = await User.findOne({ id: id }).exec();
+      let user = await User.findOne({ id: id }).exec();
+      let roomIdx = user.roomIdx;
       newImg.roomIdx = roomIdx;
       newImg.id = req.body.id;
       newImg.url = data[img_cnt].location;

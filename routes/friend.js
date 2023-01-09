@@ -1,21 +1,14 @@
 const User = require("../models/User");
 
 let invite_friends = async function (req, res, next) {
+  console.log("invite_friends", req.body);
   let isSuccess = true;
   const friend_ids = req.body.friends;
-  const room = await User.findOne(
-    { id: req.body.id },
-    {
-      id: 0,
-      nickname: 0,
-      picture: 0,
-      email: 0,
-      roomIdx: 1,
-      total_count: 0,
-      descriptions: 0,
-      elements: 0,
-    }
-  );
+  console.log("friends==", req.body);
+  console.log("id==", req.body);
+  const user = await User.findOne({ id: req.body.id }).exec();
+  const room = user.roomIdx;
+  console.log(`room : [${room}, friend_ids : [${friend_ids}]]`);
   for (let i = 0; i < friend_ids.length; i++) {
     let pre_friend = await User.findOne({ id: friend_ids[i] }).exec();
     if (pre_friend) {
