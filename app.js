@@ -1,265 +1,64 @@
 /* 모듈 선언 */
 const http = require("http");
 const express = require("express");
-const fs = require("fs");
 const upload = require("./config/multer");
-const path = require("path");
 const mongoose = require("mongoose");
 
 /* Models */
 const User = require("./models/User");
 const Img = require("./models/Image");
-const Face = require("./models/Face");
 
 const app = express();
 const server = http.createServer(app);
 const io = require("socket.io")(server);
 const port = 5000;
 
-// face-api.js 관련 모듈 선언
-const faceapi = require("face-api.js");
-const { Canvas, Image } = require("canvas");
-const canvas = require("canvas");
-// const fileUpload = require("express-fileupload");
-faceapi.env.monkeyPatch({ Canvas, Image });
+const { login } = require("./routes/login");
+const { invite_friends } = require("./routes/friend");
+const { upload_image } = require("./routes/upload_image");
+const { LoadModels } = require("./config/face_api");
+const { allowCrossDomain } = require("./config/allowCrossDomain");
 
-/*http request 에러 방지: Origin [링크] is not allowed by Access-Control-Allow-Origin.*/
-let allowCrossDomain = function (req, res, next) {
-  // Website you wish to allow to connect
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  // Request methods you wish to allow
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET, POST, OPTIONS, PUT, PATCH, DELETE"
-  );
-  // Request headers you wish to allow
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "X-Requested-With,content-type"
-  );
-  // Set to true if you need the website to include cookies in the requests sent
-  // to the API (e.g. in case you use sessions)
-  res.setHeader("Access-Control-Allow-Credentials", true);
-  next();
-};
+LoadModels();
 
 /*공통 미들웨어 장착*/
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(allowCrossDomain);
-// app.use(fileUpload({ useTempFiles: true }));
-
-// face-api 모델 로드
-let LoadModels = async function () {
-  await faceapi.nets.faceRecognitionNet.loadFromDisk(__dirname + "/weights");
-  await faceapi.nets.faceLandmark68TinyNet.loadFromDisk(__dirname + "/weights");
-  await faceapi.nets.tinyFaceDetector.loadFromDisk(__dirname + "/weights");
-  // await faceapi.nets.faceRecognitionNet.loadFromDisk(__dirname + "/weights");
-  // await faceapi.nets.faceLandmark68Net.loadFromDisk(__dirname + "/weights");
-  // await faceapi.nets.ssdMobilenetv1.loadFromDisk(__dirname + "/weights");
-};
-LoadModels();
-
-const useTinyModel = true;
-
-let makeDescription = async function (images) {
-  try {
-    const descriptions = [];
-    // Loop through the images
-    const img = await canvas.loadImage(images);
-    // Read each face and save the face descriptions in the descriptions array
-    const detections = await faceapi
-      .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-      .withFaceLandmarks(useTinyModel)
-      .withFaceDescriptor();
-    // console.log(typeof detections);
-    if (detections) descriptions.push(detections.descriptor);
-
-    // 얼굴을 인식하지 못하면 저장X
-    return descriptions;
-  } catch (error) {
-    console.log(error);
-    return error;
-  }
-};
-
-let getDescriptorsFromDB = async function (image, id) {
-  // Get all the face data from mongodb and loop through each of them to read the data
-  const user = await User.findOne({ id: id });
-  let faces = [];
-  if (!user) return null;
-
-  for (let i = 0; i < user.elements.length; i++) {
-    let friend = await User.findOne({ id: user.elements[i].id });
-    if (friend) {
-      for (let j = 0; j < friend.descriptions.length; j++) {
-        friend.descriptions[j] = new Float32Array(
-          Object.values(friend.descriptions[j])
-        );
-      }
-      faces[i] = new faceapi.LabeledFaceDescriptors(
-        friend.email,
-        friend.descriptions
-      );
-    }
-  }
-  // Load face matcher to find the matching face
-  const faceMatcher = new faceapi.FaceMatcher(faces, 0.55);
-
-  // Read the image using canvas or other method
-  const img = await canvas.loadImage(image);
-  let temp = faceapi.createCanvasFromMedia(img);
-
-  // Process the image for the model
-  const displaySize = { width: img.width, height: img.height };
-  faceapi.matchDimensions(temp, displaySize);
-
-  // Find matching faces
-  const detections = await faceapi
-    .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks(useTinyModel)
-    .withFaceDescriptors();
-  const resizedDetections = faceapi.resizeResults(detections, displaySize);
-  const results = resizedDetections.map((d) =>
-    faceMatcher.findBestMatch(d.descriptor)
-  );
-  return results;
-};
 
 /* 라우터 구성 */
-app.post("/image", upload.array("image"), async (req, res, next) => {
-  try {
-    let data = req.files;
-    let result = [];
-    let img_cnt = 0;
-    let check_result = [];
-    for (let i = 0; i < data.length; i++) {
-      /* mongo DB에 id, url 저장하는 코드 추가 필요 */
-      const newImg = new Img();
-      newImg.room = 1;
-      newImg.id = req.body.id;
-      newImg.url = data[img_cnt].location;
-      result[img_cnt] = data[img_cnt].location;
-      await newImg
-        .save() //실제로 저장된 유저값 불러옴
-        .then(async (user) => {
-          const DescriptorsFromDB = await getDescriptorsFromDB(
-            data[img_cnt].location,
-            req.body.id
-          );
-          if (DescriptorsFromDB) check_result.push(DescriptorsFromDB);
-          console.log(`[${img_cnt}] - db저장 성공 ${check_result}`);
-          img_cnt++;
-        })
-        .catch((err) => {
-          res.json({
-            message: "이미지 생성정보 db저장실패",
-          });
-          console.error(err);
-        });
-    }
-    console.log("image 업로드!");
-    console.log(check_result);
-    res.json({
-      url: result,
-      img_cnt: img_cnt,
-      result: check_result,
-    });
-  } catch (error) {
-    console.error(error);
-    next(error);
-  }
-});
+app.post("/image", upload.array("image"), upload_image);
 
-/**
- * 카카오톡 로그인, 친구 목록 조회 후
- * 유저 정보, 친구목록 정보 모두 DB 저장
- */
-app.post("/app/users/kakao", async (req, res, next) => {
-  const userInfo = req.body;
+/* 카카오톡을 통한 로그인 */
+app.post("/app/users/kakao", login);
 
-  const findUser = await User.findOne({ id: req.body.id }).exec();
-  let descriptions = null;
-
-  // 프로필 사진이 바뀌지 않은 경우, descriptions 수정 필요X
-  if (findUser) descriptions = findUser.descriptions;
-  if (findUser && findUser.picture !== userInfo.picture)
-    descriptions = await makeDescription(userInfo.picture);
-
-  const elements = [];
-  for (let i = 0; i < userInfo.total_count; i++) {
-    elements.push({
-      id: userInfo.elements[i].id,
-      uuid: userInfo.elements[i].uuid,
-      favorite: userInfo.elements[i].favorite,
-      profile_nickname: userInfo.elements[i].profile_nickname,
-      profile_thumbnail: userInfo.elements[i].profile_thumbnail,
-    });
-  }
-  if (findUser) {
-    await User.updateOne(
-      { id: req.body.id },
-      {
-        $set: {
-          nickname: userInfo.nickname,
-          picture: userInfo.picture,
-          total_count: userInfo.total_count,
-          email: userInfo.email,
-          descriptions: descriptions,
-          elements: elements,
-        },
-      }
-    );
-
-    res.json({
-      message: "유저 정보 DB 업데이트 완료",
-      isSuccess: true,
-    });
-  } else {
-    const newUser = new User();
-
-    descriptions = await makeDescription(userInfo.picture);
-
-    newUser.id = userInfo.id;
-    newUser.nickname = userInfo.nickname;
-    newUser.picture = userInfo.picture;
-    newUser.email = userInfo.email;
-    newUser.total_count = userInfo.total_count;
-    newUser.descriptions = descriptions;
-    newUser.elements = elements;
-
-    newUser
-      .save()
-      .then((user) => {
-        res.json({
-          message: "유저 정보 DB 저장 성공",
-          isSuccess: true,
-        });
-      })
-      .catch((err) => {
-        res.json({
-          message: "유저 정보 DB 저장 실패",
-          isSuccess: false,
-        });
-      });
-  }
-  console.log("/app/users/kakao finished");
-});
+/* 친구 초대 */
+app.post("/friends", invite_friends);
 
 /* 소켓 통신 */
 io.sockets.on("connection", (socket) => {
   console.log(`Socket connected ${socket.id}`);
 
-  // message
-  let roomIdx = null;
-  socket.on("join", async (room) => {
-    // room은 클라이언트에서 보낸 방 아이디
-    console.log("user joined");
-    console.log(room);
-    roomIdx = room;
-    socket.join(room); // 네임스페이스 아래에 존재하는 방에 접속
+  // 공유방 입장
+  socket.on("join", async (id) => {
+    let roomIdx = await User.findOne(
+      { id: id },
+      {
+        id: 0,
+        nickname: 0,
+        picture: 0,
+        email: 0,
+        roomIdx: 1,
+        total_count: 0,
+        descriptions: 0,
+        elements: 0,
+      }
+    ).exec();
+    console.log(`user(${id}) joined, room:${roomIdx}`);
+
+    socket.join(roomIdx); // 네임스페이스 아래에 존재하는 방에 접속
     const find_images = await Img.find(
-      { user_room: "room1" },
+      { roomIdx: roomIdx },
       { _id: 0, url: 1 }
     ).exec();
     const emit_data = {
@@ -269,14 +68,27 @@ io.sockets.on("connection", (socket) => {
     io.to(socket.id).emit("join", emit_data);
     console.log(emit_data);
   });
-  socket.on("image", (images) => {
-    // io.sockets.in(roomIdx).emit("image", img_list);
-    // io.emit("image", Object.values(img_list)[0]); //모두에게 전송
 
-    io.emit("image", images); //모두에게 전송
+  // 다른 유저들에게 사진 전송
+  socket.on("image", async (images, id) => {
+    const roomIdx = await User.findOne(
+      { id: id },
+      {
+        id: 0,
+        nickname: 0,
+        picture: 0,
+        email: 0,
+        roomIdx: 1,
+        total_count: 0,
+        descriptions: 0,
+        elements: 0,
+      }
+    ).exec();
+    io.sockets.in(roomIdx).emit("image", images);
+    // io.emit("image", images); //모두에게 전송
   });
+
   socket.on("disconnect", () => {
-    // 클라이언트의 연결이 끊어졌을 때 호출
     console.log(`Socket disconnected : ${socket.id}`);
   });
 });
@@ -292,7 +104,7 @@ mongoose
 
     /*생성된 서버가 포트를 리스닝 */
     server.listen(port, (err) => {
-      console.log(`서버가 실행됩니다. http://localhost:${port}`);
+      console.log(`서버가 실행됩니다...${port}`);
     });
   })
   .catch((err) => {
