@@ -41,12 +41,16 @@ let makeDescription = async function (image) {
 };
 
 let getDescriptorsFromDB = async function (image, id) {
+  console.log("==========getDescriptorsFromDB 함수=========");
   const user = await User.findOne({ id: id });
   let faces = [];
-  if (!user) return null;
+  if (!user) {
+    console.log(`user find 실패 - ${id}`);
+    return null;
+  }
 
   for (let i = 0; i < user.elements.length; i++) {
-    let friend = await User.findOne({ id: user.elements[i].id });
+    let friend = await User.findOne({ id: user.elements[i] });
     if (friend) {
       for (let j = 0; j < friend.descriptions.length; j++) {
         friend.descriptions[j] = new Float32Array(
@@ -57,33 +61,38 @@ let getDescriptorsFromDB = async function (image, id) {
         `${friend.id}`,
         friend.descriptions
       );
+    } else {
+      console.log(`friend find 실패 - ${user.elements[i]}`);
     }
   }
-  // Load face matcher to find the matching face
-  const faceMatcher = new faceapi.FaceMatcher(faces, 0.55);
+  if (faces.length > 0) {
+    // Load face matcher to find the matching face
+    const faceMatcher = new faceapi.FaceMatcher(faces, 0.55);
 
-  // Read the image using canvas or other method
-  const img = await canvas.loadImage(image);
-  let temp = faceapi.createCanvasFromMedia(img);
+    // Read the image using canvas or other method
+    const img = await canvas.loadImage(image);
+    let temp = faceapi.createCanvasFromMedia(img);
 
-  // Process the image for the model
-  const displaySize = { width: img.width, height: img.height };
-  faceapi.matchDimensions(temp, displaySize);
+    // Process the image for the model
+    const displaySize = { width: img.width, height: img.height };
+    faceapi.matchDimensions(temp, displaySize);
 
-  // Find matching faces
-  const detections = await faceapi
-    .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks(useTinyModel)
-    .withFaceDescriptors();
-  const resizedDetections = faceapi.resizeResults(detections, displaySize);
-  const results = resizedDetections.map((d) =>
-    faceMatcher.findBestMatch(d.descriptor)
-  );
-
-  let rtnIds = [];
-  for (let i = 0; i < results.length; i++)
-    rtnIds[i] = parseInt(results[i]._label);
-  return rtnIds;
+    // Find matching faces
+    const detections = await faceapi
+      .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks(useTinyModel)
+      .withFaceDescriptors();
+    const resizedDetections = faceapi.resizeResults(detections, displaySize);
+    const results = resizedDetections.map((d) =>
+      faceMatcher.findBestMatch(d.descriptor)
+    );
+    let rtnIds = [];
+    for (let i = 0; i < results.length; i++)
+      rtnIds[i] = parseInt(results[i]._label);
+    console.log("==========getDescriptorsFromDB 함수=========");
+    return rtnIds;
+  }
+  return [];
 };
 
 module.exports = { loadModels, makeDescription, getDescriptorsFromDB };

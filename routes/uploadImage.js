@@ -8,11 +8,12 @@ let uploadImage = async function (req, res, next) {
     let images = [];
     let imgCnt = 0;
     let checkResult = [];
+    const id = parseInt(req.body.id);
+    console.log("====업로드한 사람 id : ", id);
 
     for (let i = 0; i < data.length; i++) {
       /* mongo DB에 id, url 저장하는 코드 추가 필요 */
       const newImg = new Img();
-      const id = parseInt(req.body.id);
       let user = await User.findOne({ id: id }).exec();
       let roomIdx = user.roomIdx;
 
@@ -33,9 +34,10 @@ let uploadImage = async function (req, res, next) {
           imgCnt++;
         })
         .catch((err) => {
-          res.json({
-            message: "이미지 생성정보 db저장실패",
-          });
+          // res.json({
+          //   message: "이미지 생성정보 db저장실패",
+          // });
+          console.log(`[${imgCnt}] DB저장 실패${checkResult}`);
           console.error(err);
         });
     }
