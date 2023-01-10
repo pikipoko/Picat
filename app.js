@@ -40,9 +40,12 @@ io.sockets.on("connection", (socket) => {
 
   /**공유방 접속 */
   socket.on("join", async (id) => {
+    console.log(`${id} join 요청`);
     const user = await User.findOne({ id: id }).exec();
     let roomIdx = 0;
-    if (user.roomIdx) roomIdx = user.roomIdx;
+    if (user) {
+      if (user.roomIdx) roomIdx = user.roomIdx;
+    }
     console.log(`user(${id}) joined - room:${roomIdx}`);
 
     /**방 접속 */
@@ -63,10 +66,16 @@ io.sockets.on("connection", (socket) => {
   });
 
   /**다른 유저들에게 사진 전송 */
-  socket.on("image", async (images, id) => {
-    const user = await User.findOne({ id: id }).exec();
+  socket.on("image", async (data) => {
+    const user = await User.findOne({ id: data.id }).exec();
+
     const roomIdx = user.roomIdx;
-    io.sockets.in(roomIdx).emit("image", images);
+    console.log(
+      `${user.nickname} - ${typeof roomIdx} - ${roomIdx} -${data} ${
+        data.img_list
+      } ${data.id}`
+    );
+    io.sockets.in(roomIdx).emit("image", data);
     // io.emit("image", images); //모두에게 전송
   });
 
