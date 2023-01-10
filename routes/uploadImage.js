@@ -12,11 +12,12 @@ let uploadImage = async function (req, res, next) {
     for (let i = 0; i < data.length; i++) {
       /* mongo DB에 id, url 저장하는 코드 추가 필요 */
       const newImg = new Img();
-      let user = await User.findOne({ id: req.body.id }).exec();
+      const id = parseInt(req.body.id);
+      let user = await User.findOne({ id: id }).exec();
       let roomIdx = user.roomIdx;
 
       newImg.roomIdx = roomIdx;
-      newImg.id = req.body.id;
+      newImg.id = id;
       newImg.url = data[i].location;
 
       images[imgCnt] = data[i].location;
@@ -25,7 +26,7 @@ let uploadImage = async function (req, res, next) {
         .then(async (user) => {
           const DescriptorsFromDB = await getDescriptorsFromDB(
             data[imgCnt].location,
-            req.body.id
+            id
           );
           if (DescriptorsFromDB) checkResult.push(DescriptorsFromDB);
           console.log(`[${imgCnt}] DB저장 ${checkResult}`);
