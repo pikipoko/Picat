@@ -7,25 +7,24 @@ faceapi.env.monkeyPatch({ Canvas, Image });
 const User = require("../models/User");
 
 const useTinyModel = true;
+
 // face-api 모델 로드
-let LoadModels = async function () {
+let loadModels = async function () {
   await faceapi.nets.faceRecognitionNet.loadFromDisk(__dirname + "/weights");
   await faceapi.nets.faceLandmark68TinyNet.loadFromDisk(__dirname + "/weights");
   await faceapi.nets.tinyFaceDetector.loadFromDisk(__dirname + "/weights");
 };
 
-let makeDescription = async function (images) {
+let makeDescription = async function (image) {
   try {
     const descriptions = [];
-    // Loop through the images
 
-    const img = await canvas.loadImage(images);
-    console.log("img : ", img);
+    const img = await canvas.loadImage(image);
     if (!img) {
       console.log("이미지 파일 분석 불가");
       return null;
     }
-    // Read each face and save the face descriptions in the descriptions array
+
     const detections = await faceapi
       .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
       .withFaceLandmarks(useTinyModel)
@@ -42,7 +41,6 @@ let makeDescription = async function (images) {
 };
 
 let getDescriptorsFromDB = async function (image, id) {
-  // Get all the face data from mongodb and loop through each of them to read the data
   const user = await User.findOne({ id: id });
   let faces = [];
   if (!user) return null;
@@ -81,10 +79,11 @@ let getDescriptorsFromDB = async function (image, id) {
   const results = resizedDetections.map((d) =>
     faceMatcher.findBestMatch(d.descriptor)
   );
-  let rtn_ids = [];
+
+  let rtnIds = [];
   for (let i = 0; i < results.length; i++)
-    rtn_ids[i] = parseInt(results[i]._label);
-  return rtn_ids;
+    rtnIds[i] = parseInt(results[i]._label);
+  return rtnIds;
 };
 
-module.exports = { LoadModels, makeDescription, getDescriptorsFromDB };
+module.exports = { loadModels, makeDescription, getDescriptorsFromDB };

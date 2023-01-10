@@ -5,7 +5,7 @@ let login = async function (req, res, next) {
   const userInfo = req.body;
 
   const findUser = await User.findOne({ id: req.body.id }).exec();
-  let descriptions = null;
+  let descriptions = [];
 
   // 프로필 사진이 바뀌지 않은 경우, descriptions 수정 필요X
   if (findUser) {
@@ -14,16 +14,13 @@ let login = async function (req, res, next) {
       descriptions = await makeDescription(userInfo.picture);
   }
 
+  /**친구 id 저장 */
   const elements = [];
-  for (let i = 0; i < userInfo.total_count; i++) {
-    elements.push({
-      id: userInfo.elements[i].id,
-      uuid: userInfo.elements[i].uuid,
-      favorite: userInfo.elements[i].favorite,
-      profile_nickname: userInfo.elements[i].profile_nickname,
-      profile_thumbnail: userInfo.elements[i].profile_thumbnail,
-    });
+  for (let i = 0; i < userInfo.elements.length; i++) {
+    elements.push(userInfo.elements[i].id);
   }
+
+  /**기존 사용자면 업데이트 */
   if (findUser) {
     await User.updateOne(
       { id: req.body.id },

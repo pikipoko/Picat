@@ -14,15 +14,19 @@ const userSchema = new Schema(
       type: Array,
       required: true,
     },
-    elements: [
-      new Schema({
-        id: Number,
-        uuid: String,
-        favorite: Boolean,
-        profile_nickname: String,
-        profile_thumbnail_image: String,
-      }),
-    ],
+    elements: {
+      type: Array,
+      required: true,
+    },
+    // elements: [
+    // new Schema({
+    //   id: Number,
+    //   uuid: String,
+    //   favorite: Boolean,
+    //   profile_nickname: String,
+    //   profile_thumbnail_image: String,
+    // }),
+    // ],
   },
   {
     //새로운 object 전달

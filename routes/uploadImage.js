@@ -2,31 +2,34 @@ const User = require("../models/User");
 const Img = require("../models/Image");
 const { getDescriptorsFromDB } = require("../config/face_api");
 
-let upload_image = async function (req, res, next) {
+let uploadImage = async function (req, res, next) {
   try {
-    let data = req.files;
+    const data = req.files;
     let images = [];
-    let img_cnt = 0;
-    let check_result = [];
+    let imgCnt = 0;
+    let checkResult = [];
+
     for (let i = 0; i < data.length; i++) {
       /* mongo DB에 id, url 저장하는 코드 추가 필요 */
       const newImg = new Img();
-      let user = await User.findOne({ id: id }).exec();
+      let user = await User.findOne({ id: req.body.id }).exec();
       let roomIdx = user.roomIdx;
+
       newImg.roomIdx = roomIdx;
       newImg.id = req.body.id;
-      newImg.url = data[img_cnt].location;
-      images[img_cnt] = data[img_cnt].location;
+      newImg.url = data[i].location;
+
+      images[imgCnt] = data[i].location;
       await newImg
         .save() //실제로 저장된 유저값 불러옴
         .then(async (user) => {
           const DescriptorsFromDB = await getDescriptorsFromDB(
-            data[img_cnt].location,
+            data[imgCnt].location,
             req.body.id
           );
-          if (DescriptorsFromDB) check_result.push(DescriptorsFromDB);
-          console.log(`[${img_cnt}] DB저장 ${check_result}`);
-          img_cnt++;
+          if (DescriptorsFromDB) checkResult.push(DescriptorsFromDB);
+          console.log(`[${imgCnt}] DB저장 ${checkResult}`);
+          imgCnt++;
         })
         .catch((err) => {
           res.json({
@@ -35,10 +38,11 @@ let upload_image = async function (req, res, next) {
           console.error(err);
         });
     }
+
     res.json({
       url: images,
-      img_cnt: img_cnt,
-      friends: check_result,
+      img_cnt: imgCnt,
+      friends: checkResult,
     });
   } catch (error) {
     console.error(error);
@@ -46,4 +50,4 @@ let upload_image = async function (req, res, next) {
   }
 };
 
-module.exports = { upload_image };
+module.exports = { uploadImage };
