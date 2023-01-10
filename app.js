@@ -62,11 +62,12 @@ io.sockets.on("connection", (socket) => {
 
     /**공유방 이미지 목록 클라이언트에게 전달 */
     io.to(socket.id).emit("join", emit_data);
-    console.log(emit_data);
+    console.log(emit_data.img_cnt);
   });
 
   /**다른 유저들에게 사진 전송 */
   socket.on("image", async (data) => {
+    console.log("===이미지 이벤트 : ", data.img_cnt, data.id);
     const user = await User.findOne({ id: data.id }).exec();
 
     const roomIdx = user.roomIdx;
@@ -75,8 +76,9 @@ io.sockets.on("connection", (socket) => {
         data.img_list
       } ${data.id}`
     );
-    io.sockets.in(roomIdx).emit("image", data);
-    // io.emit("image", images); //모두에게 전송
+    io.to(roomIdx).emit("image", data);
+    // io.sockets.in(roomIdx).emit("image", data);
+    // io.emit("image", data); //모두에게 전송
   });
 
   socket.on("disconnect", () => {

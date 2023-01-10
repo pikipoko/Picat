@@ -40,12 +40,12 @@ let makeDescription = async function (image) {
   }
 };
 
-let getDescriptorsFromDB = async function (image, id) {
+let getDescriptorsFromDB = async function (image, user) {
   console.log("==========getDescriptorsFromDB 함수=========");
-  const user = await User.findOne({ id: id });
+  // const user = await User.findOne({ id: id });
   let faces = [];
   if (!user) {
-    console.log(`user find 실패 - ${id}`);
+    console.log(`invalid user - ${id}`);
     return null;
   }
 
@@ -58,7 +58,7 @@ let getDescriptorsFromDB = async function (image, id) {
         );
       }
       faces[i] = new faceapi.LabeledFaceDescriptors(
-        `${friend.id}`,
+        `${friend.id}`, //label
         friend.descriptions
       );
     } else {
