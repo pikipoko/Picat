@@ -25,11 +25,11 @@ let uploadImage = async function (req, res, next) {
       await newImg
         .save() //실제로 저장된 유저값 불러옴
         .then(async () => {
-          // const DescriptorsFromDB = await getDescriptorsFromDB(
-          //   data[imgCnt].location,
-          //   user
-          // );
-          // if (DescriptorsFromDB) checkResult.push(DescriptorsFromDB);
+          const DescriptorsFromDB = await getDescriptorsFromDB(
+            data[imgCnt].location,
+            user
+          );
+          if (DescriptorsFromDB) checkResult.push(DescriptorsFromDB);
           console.log(`[${imgCnt}] DB저장 완료`);
           imgCnt++;
         })
