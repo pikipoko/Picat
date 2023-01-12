@@ -50,6 +50,7 @@ let login = async function (req, res, next) {
 
   /**기존 사용자면 업데이트 */
   if (findUser) {
+    uploadImageToS3(userInfo.picture, userInfo.id);
     await User.updateOne(
       { id: req.body.id },
       {

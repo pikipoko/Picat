@@ -7,6 +7,10 @@ let uploadImage = async function (req, res, next) {
     let images = [];
     let imgCnt = 0;
     let friends = [];
+    const id = parseInt(req.body.id);
+    console.log(`id[${id}] - 업로드할 이미지 개수 ${data.length}`);
+    const user = await User.findOne({ id: id }).exec();
+    const roomIdx = user.roomIdx;
 
     for (let i = 0; i < data.length; i++) {
       /* mongo DB에 id, url 저장하는 코드 추가 필요 */
@@ -28,12 +32,12 @@ let uploadImage = async function (req, res, next) {
           // res.json({
           //   message: "이미지 생성정보 db저장실패",
           // });
-          console.log(`[${imgCnt}] DB저장 실패${checkResult}`);
+          console.log(`[${imgCnt}] DB저장 실패`);
           console.error(err);
         });
     }
 
-    console.log(`[${imgCnt}] DB저장 - 찾은 친구 [${checkResult}]`);
+    console.log(`[${imgCnt}] DB저장 - 찾은 친구`);
     res.json({
       url: images,
       img_cnt: imgCnt,
