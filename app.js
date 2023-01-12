@@ -19,10 +19,7 @@ const { login } = require("./routes/login");
 const { inviteFriends } = require("./routes/friends");
 const { uploadImage } = require("./routes/uploadImage");
 
-const { loadModels } = require("./config/face_api");
 const { allowCrossDomain } = require("./config/allowCrossDomain");
-
-loadModels();
 
 /**공통 미들웨어 장착*/
 app.use(express.json());

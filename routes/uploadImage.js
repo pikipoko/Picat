@@ -1,17 +1,12 @@
 const User = require("../models/User");
 const Img = require("../models/Image");
-const { getDescriptorsFromDB } = require("../config/face_api");
 
 let uploadImage = async function (req, res, next) {
   try {
     const data = req.files;
     let images = [];
     let imgCnt = 0;
-    let checkResult = [];
-    const id = parseInt(req.body.id);
-    console.log(`id[${id}] - 업로드할 이미지 개수 ${data.length}`);
-    const user = await User.findOne({ id: id }).exec();
-    const roomIdx = user.roomIdx;
+    let friends = [];
 
     for (let i = 0; i < data.length; i++) {
       /* mongo DB에 id, url 저장하는 코드 추가 필요 */
@@ -24,13 +19,9 @@ let uploadImage = async function (req, res, next) {
       images[imgCnt] = data[i].location;
       await newImg
         .save() //실제로 저장된 유저값 불러옴
-        .then(async () => {
-          const DescriptorsFromDB = await getDescriptorsFromDB(
-            data[imgCnt].location,
-            user
-          );
-          if (DescriptorsFromDB) checkResult.push(DescriptorsFromDB);
-          console.log(`[${imgCnt}] DB저장 완료`);
+        .then(async (user) => {
+          // friends 찾아서 friends에 저장
+          console.log(`[${imgCnt}] DB저장`);
           imgCnt++;
         })
         .catch((err) => {
@@ -46,7 +37,7 @@ let uploadImage = async function (req, res, next) {
     res.json({
       url: images,
       img_cnt: imgCnt,
-      friends: checkResult,
+      friends: friends,
     });
   } catch (error) {
     console.error(error);
