@@ -15,22 +15,24 @@ const s3 = new AWS.S3({
 const uploadImageToS3 = (imageUrl, fileName) => {
   return new Promise((resolve, reject) => {
     fetch(imageUrl).then((res) => {
-      res.body.pipe(fs.createWriteStream("temp.jpg")).on("finish", (data) => {
-        const param = {
-          Bucket: "picat",
-          Key: fileName,
-          ACL: "public-read",
-          Body: fs.createReadStream("temp.jpg"),
-          ContentType: "image/jpg",
-        };
+      res.body
+        .pipe(fs.createWriteStream(`config/users/${fileName}.jpg`))
+        .on("finish", async (data) => {
+          const param = {
+            Bucket: "picat",
+            Key: `users/${fileName}.jpg`, // s3 bucket 에다가 다운.
+            ACL: "public-read",
+            Body: fs.createReadStream(`config/users/${fileName}.jpg`), // 우리 서버에다가 다운
+            ContentType: "image/jpg",
+          };
 
-        s3.upload(param, (error, data) => {
-          if (error) {
-            console.log("upload s3 error", error);
-          }
-          console.log(data);
+          await s3.upload(param, (error, data) => {
+            if (error) {
+              console.log("upload s3 error", error);
+            }
+            console.log(data);
+          });
         });
-      });
     });
   });
 };
@@ -67,7 +69,7 @@ let login = async function (req, res, next) {
     });
   } else {
     const newUser = new User();
-    await uploadImageToS3(userInfo.picture, userInfo.picture);
+    uploadImageToS3(userInfo.picture, userInfo.id);
 
     newUser.id = userInfo.id;
     newUser.roomIdx = userInfo.id;
