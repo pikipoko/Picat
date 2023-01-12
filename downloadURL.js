@@ -1,5 +1,5 @@
 require("request");
-var fs = require("fs");
+const fs = require("fs");
 
 const downloadURL = async (URL) => {
   const requestOptions = {
@@ -15,6 +15,7 @@ const downloadURL = async (URL) => {
 
   await request(requestOptions).pipe(fs.createWriteStream("../" + fileName));
 };
+
 // // 네이버에 있는 신문의 이미지를 다운로드
 // // 헤더를 지정하지 않고 바로 사용해도 됨
 // var requestOptions = {

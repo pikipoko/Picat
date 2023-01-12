@@ -1,17 +1,44 @@
+require("dotenv").config;
+const fetch = require("node-fetch");
 const User = require("../models/User");
+const AWS = require("aws-sdk");
+
+const fs = require("fs");
+const s3 = new AWS.S3({
+  credentials: {
+    accessKeyId: process.env.S3_ACCESS_KEY_ID,
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+  },
+  region: "ap-northeast-2",
+});
+
+const uploadImageToS3 = (imageUrl, fileName) => {
+  return new Promise((resolve, reject) => {
+    fetch(imageUrl).then((res) => {
+      res.body.pipe(fs.createWriteStream("temp.jpg")).on("finish", (data) => {
+        const param = {
+          Bucket: "picat",
+          Key: fileName,
+          ACL: "public-read",
+          Body: fs.createReadStream("temp.jpg"),
+          ContentType: "image/jpg",
+        };
+
+        s3.upload(param, (error, data) => {
+          if (error) {
+            console.log("upload s3 error", error);
+          }
+          console.log(data);
+        });
+      });
+    });
+  });
+};
 
 let login = async function (req, res, next) {
   const userInfo = req.body;
 
   const findUser = await User.findOne({ id: req.body.id }).exec();
-  let descriptions = [];
-
-  // 프로필 사진이 바뀌지 않은 경우, descriptions 수정 필요X
-  // if (findUser) {
-  //   descriptions = findUser.descriptions;
-  //   if (findUser.picture !== userInfo.picture)
-  //     descriptions = await makeDescription(userInfo.picture);
-  // }
 
   /**친구 id 저장 */
   const elements = [];
@@ -29,7 +56,6 @@ let login = async function (req, res, next) {
           picture: userInfo.picture,
           total_count: userInfo.total_count,
           email: userInfo.email,
-          // descriptions: descriptions,
           elements: elements,
         },
       }
@@ -41,7 +67,7 @@ let login = async function (req, res, next) {
     });
   } else {
     const newUser = new User();
-    // descriptions = await makeDescription(userInfo.picture);
+    await uploadImageToS3(userInfo.picture, userInfo.picture);
 
     newUser.id = userInfo.id;
     newUser.roomIdx = userInfo.id;
@@ -49,7 +75,6 @@ let login = async function (req, res, next) {
     newUser.picture = userInfo.picture;
     newUser.email = userInfo.email;
     newUser.total_count = userInfo.total_count;
-    // newUser.descriptions = descriptions;
     newUser.elements = elements;
     console.log(newUser);
     newUser
