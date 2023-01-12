@@ -1,5 +1,4 @@
 const User = require("../models/User");
-const { makeDescription } = require("../config/face_api");
 
 let login = async function (req, res, next) {
   const userInfo = req.body;
@@ -8,11 +7,11 @@ let login = async function (req, res, next) {
   let descriptions = [];
 
   // 프로필 사진이 바뀌지 않은 경우, descriptions 수정 필요X
-  if (findUser) {
-    descriptions = findUser.descriptions;
-    if (findUser.picture !== userInfo.picture)
-      descriptions = await makeDescription(userInfo.picture);
-  }
+  // if (findUser) {
+  //   descriptions = findUser.descriptions;
+  //   if (findUser.picture !== userInfo.picture)
+  //     descriptions = await makeDescription(userInfo.picture);
+  // }
 
   /**친구 id 저장 */
   const elements = [];
@@ -30,7 +29,7 @@ let login = async function (req, res, next) {
           picture: userInfo.picture,
           total_count: userInfo.total_count,
           email: userInfo.email,
-          descriptions: descriptions,
+          // descriptions: descriptions,
           elements: elements,
         },
       }
@@ -42,7 +41,7 @@ let login = async function (req, res, next) {
     });
   } else {
     const newUser = new User();
-    descriptions = await makeDescription(userInfo.picture);
+    // descriptions = await makeDescription(userInfo.picture);
 
     newUser.id = userInfo.id;
     newUser.roomIdx = userInfo.id;
@@ -50,7 +49,7 @@ let login = async function (req, res, next) {
     newUser.picture = userInfo.picture;
     newUser.email = userInfo.email;
     newUser.total_count = userInfo.total_count;
-    newUser.descriptions = descriptions;
+    // newUser.descriptions = descriptions;
     newUser.elements = elements;
     console.log(newUser);
     newUser
