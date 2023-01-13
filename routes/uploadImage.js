@@ -1,9 +1,73 @@
 const User = require("../models/User");
 const Img = require("../models/Image");
 // const compareFaces = require("../config/compareFaces");
-
+////
 const AWS = require("aws-sdk");
-const client = new AWS.Rekognition({ region: "ap-northeast-2" });
+const rekognition = new AWS.Rekognition({ region: "ap-northeast-2" });
+
+async function isFace(params_detect) {
+  await rekognition
+    .detectFaces(params_detect, function (err, response) {
+      if (err) {
+        console.log("에러");
+        console.log(err);
+      } else {
+        // console.log("에러아님");
+        // console.log(response.FaceDetails.length);
+        faces = response.FaceDetails.length;
+      }
+    })
+    .promise(); //////
+}
+
+function cmpFaces(params, user_id, usersInImage, newImg_url) {
+  return new Promise(function (resolve, reject) {
+    rekognition.compareFaces(params, async function (err, response) {
+      if (err) {
+        console.log(`얼굴 못 찾음!!!`);
+        // console.log(err, err.stack); // an error occurred
+      } else {
+        console.log(`얼굴 찾음!!`);
+        console.log("user_id:", user_id);
+        if (response.FaceMatches.length) {
+          console.log(response.FaceMatches[0].Similarity);
+          // await similar_check(response, user_id, usersInImage, newImg_url);
+          // response.FaceMatches.forEach(async (data) => {
+          if (response.FaceMatches[0].Similarity > 90) {
+            // if (!friendsInImage.includes({ id: user.elements[j] })) {
+            if (
+              friendsInImage.filter(function (friend) {
+                return friend.id == user_id;
+              }).length == 0
+            ) {
+              let friend = await User.findOne({
+                id: user_id,
+              }).exec();
+
+              friendsInImage.push({
+                nickname: friend.nickname,
+                id: user_id,
+                picture: friend.picture,
+              });
+            }
+            if (!usersInImage.includes(user_id)) {
+              usersInImage.push(user_id);
+              await Img.updateOne(
+                { url: newImg_url },
+                { $set: { users: usersInImage } }
+              );
+            }
+            // console.log(friendsInImage, user.elements[j]);
+          }
+          // }); // for response.faceDetails
+        }
+      } // if
+      resolve();
+    });
+  });
+}
+let friendsInImage = [];
+let faces = 0;
 
 let uploadImage = async function (req, res, next) {
   try {
@@ -11,7 +75,7 @@ let uploadImage = async function (req, res, next) {
     let images = [];
     let imgCnt = 0;
     // 사진에서 친구들을 찾아야 함.
-    let friendsInImage = [];
+    friendsInImage = [];
     const id = parseInt(req.body.id);
     const user = await User.findOne({ id: id }).exec();
     // user : 사진을 업로드한 유저
@@ -28,65 +92,48 @@ let uploadImage = async function (req, res, next) {
       newImg.url = data[i].location;
 
       console.log(user.elements);
-      // friends 찾아서 friends에 저장
-      for (let j = 0; j < user.elements.length; j++) {
-        if (user.elements[j] && newImg.url) {
-          const params = {
-            SourceImage: {
-              S3Object: {
-                Bucket: "picat-2nd",
-                Name: `users/${user.elements[j]}.jpg`,
-              },
-            },
-            TargetImage: {
-              S3Object: {
-                Bucket: "picat-2nd",
-                Name: newImg.url.split("/")[3],
-              },
-            },
-            SimilarityThreshold: 70,
-          };
-          await client
-            .compareFaces(params, function (err, response) {
-              if (err) {
-                console.log(`얼굴 못 찾음!!!`);
-                // console.log(err, err.stack); // an error occurred
-              } else {
-                response.FaceMatches.forEach(async (data) => {
-                  if (data.Similarity > 90) {
-                    // if (!friendsInImage.includes({ id: user.elements[j] })) {
-                    if (
-                      friendsInImage.filter(function (friend) {
-                        return friend.id == user.elements[j];
-                      }).length == 0
-                    ) {
-                      let friend = await User.findOne({
-                        id: user.elements[j],
-                      }).exec();
+      /*얼굴 있는지 여부 판단 */
+      const params_detect = {
+        Image: {
+          S3Object: {
+            Bucket: "picat-2nd",
+            // Name: "6831673595793475.jpg",
+            Name: newImg.url.split("/")[3],
+            // Version: "string",
+          },
+        },
+      };
+      faces = 0;
+      await isFace(params_detect).then(() => {});
+      console.log("faces", faces);
 
-                      friendsInImage.push({
-                        nickname: friend.nickname,
-                        id: user.elements[j],
-                        picture: friend.picture,
-                      });
-                    }
-                    if (!usersInImage.includes(user.elements[j])) {
-                      usersInImage.push(user.elements[j]);
-                      await Img.updateOne(
-                        { url: newImg.url },
-                        { $set: { users: usersInImage } }
-                      );
-                    }
-                    // console.log(friendsInImage, user.elements[j]);
-                  }
-                }); // for response.faceDetails
-              } // if
-            })
-            .promise();
-        } else {
-          console.log(
-            `error - invalid | ${user.elements[j]} | ${newImg.url} |`
-          );
+      if (faces) {
+        // friends 찾아서 friends에 저장
+        for (let j = 0; j < user.elements.length; j++) {
+          console.log(`======== 현재 i : ${i}, j:${j} ======== `);
+          if (user.elements[j] && newImg.url) {
+            const params = {
+              SourceImage: {
+                S3Object: {
+                  Bucket: "picat-2nd",
+                  Name: `users/${user.elements[j]}.jpg`,
+                },
+              },
+              TargetImage: {
+                S3Object: {
+                  Bucket: "picat-2nd",
+                  Name: newImg.url.split("/")[3],
+                },
+              },
+              SimilarityThreshold: 70,
+            };
+
+            await cmpFaces(params, user.elements[j], usersInImage, newImg.url);
+          } else {
+            console.log(
+              `error - invalid | ${user.elements[j]} | ${newImg.url} |`
+            );
+          }
         }
       }
       // newImg.users = usersInImage;
