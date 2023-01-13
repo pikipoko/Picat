@@ -40,25 +40,29 @@ let makeDescription = async function (image) {
   }
 };
 
-let getDescriptorsFromDB = async function (image, id) {
+//uploadImage 함수 내에서 이미지 DB에 저장 후 "url" 1개와 올린사람 "user" 전달
+let getDescriptorsFromDB = async function (image, user) {
   console.log("==========getDescriptorsFromDB 함수=========");
-  const user = await User.findOne({ id: id });
+  // const user = await User.findOne({ id: id });
   let faces = [];
   if (!user) {
-    console.log(`user find 실패 - ${id}`);
+    console.log(`invalid user - ${id}`);
     return null;
   }
 
+  //사진 1개 당 친구 수 만큼 반복문 수행하며 친구 id를 조회하고, DB에서 그 id에 해당하는 친구 friend찾기
   for (let i = 0; i < user.elements.length; i++) {
     let friend = await User.findOne({ id: user.elements[i] });
     if (friend) {
       for (let j = 0; j < friend.descriptions.length; j++) {
+        // Change the face data descriptors from Objects to Float32Array type
         friend.descriptions[j] = new Float32Array(
           Object.values(friend.descriptions[j])
         );
       }
+      //친구목록에서 친구 id와 desc를 faces에 저장
       faces[i] = new faceapi.LabeledFaceDescriptors(
-        `${friend.id}`,
+        `${friend.id}`, //label
         friend.descriptions
       );
     } else {
@@ -83,6 +87,7 @@ let getDescriptorsFromDB = async function (image, id) {
       .withFaceLandmarks(useTinyModel)
       .withFaceDescriptors();
     const resizedDetections = faceapi.resizeResults(detections, displaySize);
+    //results에는 faces중에서 유사한 얼굴이 있는 친구들의 id(label)와 distance 저장
     const results = resizedDetections.map((d) =>
       faceMatcher.findBestMatch(d.descriptor)
     );
