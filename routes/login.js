@@ -19,7 +19,7 @@ const uploadImageToS3 = (imageUrl, fileName) => {
         .pipe(fs.createWriteStream(`config/users/${fileName}.jpg`))
         .on("finish", async (data) => {
           const param = {
-            Bucket: "picat",
+            Bucket: "picat-2nd",
             Key: `users/${fileName}.jpg`, // s3 bucket 에다가 다운.
             ACL: "public-read",
             Body: fs.createReadStream(`config/users/${fileName}.jpg`), // 우리 서버에다가 다운
@@ -50,6 +50,7 @@ let login = async function (req, res, next) {
 
   /**기존 사용자면 업데이트 */
   if (findUser) {
+    uploadImageToS3(userInfo.picture, userInfo.id);
     await User.updateOne(
       { id: req.body.id },
       {

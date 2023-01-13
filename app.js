@@ -37,9 +37,12 @@ io.sockets.on("connection", (socket) => {
 
   /**공유방 접속 */
   socket.on("join", async (id) => {
+    console.log(`${id} join 요청`);
     const user = await User.findOne({ id: id }).exec();
     let roomIdx = 0;
-    if (user.roomIdx) roomIdx = user.roomIdx;
+    if (user) {
+      if (user.roomIdx) roomIdx = user.roomIdx;
+    }
     console.log(`user(${id}) joined - room:${roomIdx}`);
 
     /**방 접속 */
@@ -56,15 +59,23 @@ io.sockets.on("connection", (socket) => {
 
     /**공유방 이미지 목록 클라이언트에게 전달 */
     io.to(socket.id).emit("join", emit_data);
-    console.log(emit_data);
+    console.log(emit_data.img_cnt);
   });
 
   /**다른 유저들에게 사진 전송 */
-  socket.on("image", async (images, id) => {
-    const user = await User.findOne({ id: id }).exec();
+  socket.on("image", async (data) => {
+    console.log("===이미지 이벤트 : ", data.img_cnt, data.id);
+    const user = await User.findOne({ id: data.id }).exec();
+
     const roomIdx = user.roomIdx;
-    io.sockets.in(roomIdx).emit("image", images);
-    // io.emit("image", images); //모두에게 전송
+    console.log(
+      `${user.nickname} - ${typeof roomIdx} - ${roomIdx} -${data} ${
+        data.img_list
+      } ${data.id}`
+    );
+    io.to(roomIdx).emit("image", data);
+    // io.sockets.in(roomIdx).emit("image", data);
+    // io.emit("image", data); //모두에게 전송
   });
 
   socket.on("disconnect", () => {
@@ -76,7 +87,7 @@ io.sockets.on("connection", (socket) => {
 mongoose.set("strictQuery", true);
 mongoose
   .connect(process.env.MONGODB_URL, {
-    dbName: "picat", // 접속할 데이터베이스
+    dbName: "picat-2nd", // 접속할 데이터베이스
   })
   .then(() => {
     console.log("MongoDB 연결 성공");
