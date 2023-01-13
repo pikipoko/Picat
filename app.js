@@ -87,7 +87,7 @@ io.sockets.on("connection", (socket) => {
 mongoose.set("strictQuery", true);
 mongoose
   .connect(process.env.MONGODB_URL, {
-    dbName: "picat", // 접속할 데이터베이스
+    dbName: "picat-2nd", // 접속할 데이터베이스
   })
   .then(() => {
     console.log("MongoDB 연결 성공");

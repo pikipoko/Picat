@@ -19,7 +19,7 @@ const uploadImageToS3 = (imageUrl, fileName) => {
         .pipe(fs.createWriteStream(`config/users/${fileName}.jpg`))
         .on("finish", async (data) => {
           const param = {
-            Bucket: "picat",
+            Bucket: "picat-2nd",
             Key: `users/${fileName}.jpg`, // s3 bucket 에다가 다운.
             ACL: "public-read",
             Body: fs.createReadStream(`config/users/${fileName}.jpg`), // 우리 서버에다가 다운
