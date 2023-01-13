@@ -18,7 +18,7 @@ const upload = multer({
   storage: multerS3({
     s3,
     bucket: "picat-2nd",
-    // acl: 'public-read',
+    acl: "public-read",
     key: function (req, file, cb) {
       cb(
         null,

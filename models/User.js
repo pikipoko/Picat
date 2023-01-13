@@ -18,6 +18,7 @@ const userSchema = new Schema(
       type: Array,
       required: true,
     },
+    my_device_id: String,
     // elements: [
     // new Schema({
     //   id: Number,
