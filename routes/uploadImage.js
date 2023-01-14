@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const Img = require("../models/Image");
+const Room = require("../models/Room");
 // const compareFaces = require("../config/compareFaces");
 
 const AWS = require("aws-sdk");
@@ -13,11 +14,14 @@ async function uploadImage(req, res, next) {
   let resImages = [];
 
   const images = req.files;
-  const uploaderId = req.body.id;
+  const uploaderId = parseInt(req.body.id);
   let friendsInImage = [];
 
   const uploader = await User.findOne({ id: uploaderId });
   const uploaderFriends = uploader.elements;
+  uploaderFriends.push(uploaderId);
+  const room = await Room.findOne({ roomIdx: uploader.roomIdx });
+  const roomMembers = room.members;
 
   for (let imageIdx = 0; imageIdx < images.length; imageIdx++) {
     let preImage = images[imageIdx].location;
@@ -92,7 +96,8 @@ async function uploadImage(req, res, next) {
                         if (
                           friendsInImage.filter(
                             (friend) => friend.id == uploaderFriends[friendIdx]
-                          ).length == 0
+                          ).length == 0 &&
+                          !roomMembers.includes(uploaderFriends[friendIdx])
                         ) {
                           let friend = await User.findOne({
                             id: uploaderFriends[friendIdx],
