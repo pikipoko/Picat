@@ -18,6 +18,7 @@ const port = 5000;
 const { login } = require("./routes/login");
 const { inviteFriends } = require("./routes/friends");
 const { uploadImage } = require("./routes/uploadImage");
+const { filter } = require("./routes/filter");
 
 const { allowCrossDomain } = require("./config/allowCrossDomain");
 
@@ -30,6 +31,7 @@ app.use(allowCrossDomain);
 app.post("/image", upload.array("image"), uploadImage); /**이미지 업로드 */
 app.post("/app/users/kakao", login); /**카카오톡을 통한 로그인 */
 app.post("/friends", inviteFriends); /**친구 초대 */
+app.get("/filter", filter); /**친구 초대 */
 
 /**소켓 통신 */
 io.sockets.on("connection", (socket) => {
