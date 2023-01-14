@@ -1,6 +1,7 @@
 require("dotenv").config;
 const fetch = require("node-fetch");
 const User = require("../models/User");
+const Room = require("../models/Room");
 const AWS = require("aws-sdk");
 
 const fs = require("fs");
@@ -30,7 +31,6 @@ const uploadImageToS3 = (imageUrl, fileName) => {
             if (error) {
               console.log("upload s3 error", error);
             }
-            console.log(data);
           });
         });
     });
@@ -39,8 +39,8 @@ const uploadImageToS3 = (imageUrl, fileName) => {
 
 let login = async function (req, res, next) {
   const userInfo = req.body;
-
   const findUser = await User.findOne({ id: req.body.id }).exec();
+  const findRoom = await Room.findOne({ roomIdx: req.body.id }).exec();
 
   /**친구 id 저장 */
   const elements = [];
@@ -62,16 +62,46 @@ let login = async function (req, res, next) {
           elements: elements,
         },
       }
-    );
-
-    res.json({
-      message: "유저 정보 DB 업데이트 완료",
-      isSuccess: true,
+    ).then(async () => {
+      if (!findRoom) {
+        const newRoom = new Room();
+        // 방 생성
+        newRoom.roomIdx = userInfo.id;
+        newRoom.roomMemberCnt = 1;
+        newRoom.members = [userInfo.id];
+        await newRoom
+          .save()
+          .then(() => {
+            res.json({
+              message: "유저 및 방 생성 성공",
+              isSuccess: true,
+            });
+          })
+          .catch((err) => {
+            res.json({
+              message: "방 생성 실패",
+              isSuccess: false,
+            });
+          });
+      } else {
+        res.json({
+          message: "유저 정보 업데이트 성공",
+          isSuccess: true,
+        });
+      }
     });
   } else {
+    // DB에 등록되지 않은 유저면, 즉 새로운 사용자면,
+    const newRoom = new Room();
     const newUser = new User();
     uploadImageToS3(userInfo.picture, userInfo.id);
 
+    // 방 생성
+    newRoom.roomIdx = userInfo.id;
+    newRoom.roomMemberCnt = 1;
+    newRoom.members = [userInfo.id];
+
+    // 유저 생성
     newUser.id = userInfo.id;
     newUser.roomIdx = userInfo.id;
     newUser.nickname = userInfo.nickname;
@@ -79,23 +109,50 @@ let login = async function (req, res, next) {
     newUser.email = userInfo.email;
     newUser.total_count = userInfo.total_count;
     newUser.elements = elements;
-    console.log(newUser);
-    newUser
+
+    // 유저, 방 DB에 저장
+    await newUser
       .save()
-      .then((user) => {
-        res.json({
-          message: "유저 정보 DB 저장 성공",
-          isSuccess: true,
-        });
+      .then(async () => {
+        if (findRoom) {
+          await Room.updateOne(
+            { roomIdx: req.body.id },
+            {
+              $set: {
+                roomMemberCnt: newRoom.roomMemberCnt,
+                members: newRoom.members,
+              },
+            }
+          ).then(() => {
+            res.json({
+              message: "유저 및 방 생성 성공!",
+              isSuccess: true,
+            });
+          });
+        } else {
+          await newRoom
+            .save()
+            .then(() => {
+              res.json({
+                message: "유저 및 방 생성 성공",
+                isSuccess: true,
+              });
+            })
+            .catch((err) => {
+              res.json({
+                message: "방 생성 실패",
+                isSuccess: false,
+              });
+            });
+        }
       })
       .catch((err) => {
         res.json({
-          message: "유저 정보 DB 저장 실패",
+          message: "유저 생성 실패",
           isSuccess: false,
         });
       });
   }
-  console.log("/app/users/kakao finished");
 };
 
 module.exports = { login };
