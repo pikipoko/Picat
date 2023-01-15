@@ -35,7 +35,7 @@ async function checkOutTheRoom(id) {
   // S3 삭제하는 방법도 알아내야됨.
   if (updateMembers.length == 0) {
     console.log(`방에 남아있는 사람이 없기 때문에 이미지 삭제 시작`);
-    await Image.deleteMany({ roomIdx: originalRoom.roomIdx }).then(() => {
+    await Img.deleteMany({ roomIdx: originalRoom.roomIdx }).then(() => {
       console.log(`방에 남아있던 이미지 모두 삭제 완료`);
     });
   }
@@ -77,10 +77,10 @@ async function checkInTheRoom(id) {
     });
   } else {
     // 빈 방이 없는 경우 -> 새 방 생성
-    let newRoomIdx = Room.count() + 1;
+    let newRoomIdx = await Room.count();
     let roomInUse = await Room.findOne({ roomIdx: newRoomIdx }).exec();
     while (roomInUse) {
-      newRoomIdx = Room.count() + 1;
+      newRoomIdx++;
       roomInUse = await Room.findOne({ roomIdx: newRoomIdx }).exec();
     }
     const newRoom = new Room();
@@ -88,7 +88,20 @@ async function checkInTheRoom(id) {
     newRoom.roomMemberCnt = updateMembers.length;
     newRoom.members = updateMembers;
     await newRoom.save().then(() => {
-      console.log(`| ${user.nickname} | 빈 방X -> 새 방${newRoomIdx} 할당`);
+      console.log(`| ${user.nickname} | 빈 방X -> 새 방[${newRoomIdx}] 할당`);
+    });
+
+    await User.updateOne(
+      {
+        id: id,
+      },
+      {
+        $set: {
+          roomIdx: newRoomIdx,
+        },
+      }
+    ).then(() => {
+      console.log(`${user.nickname}님 ${newRoomIdx}번 방으로 이동 완료`);
     });
   }
 }
