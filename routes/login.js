@@ -88,6 +88,7 @@ const login = async function (req, res, next) {
     newUser.email = userInfo.email;
     newUser.total_count = userInfo.total_count;
     newUser.elements = elements;
+    newUser.my_device_id = userInfo.my_device_id;
 
     // 유저, 방 DB에 저장
     await newUser.save().catch((err) => {

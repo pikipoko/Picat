@@ -35,10 +35,11 @@ app.post("/app/users/kakao", login); /**카카오톡을 통한 로그인 */
 app.post("/friends", inviteFriends); /**친구 초대 */
 app.get("/filter", filter); /**친구 초대 */
 
+let socketCnt = 0;
 /**소켓 통신 */
 io.sockets.on("connection", (socket) => {
-  console.log(`Socket connected ${socket.id}`);
-
+  socketCnt++;
+  console.log(`Socket connected ${socket.id} | 현재 소켓 수 : ${socketCnt} |`);
   /**공유방 접속 */
   socket.on("join", async (joinData) => {
     console.log(`=====joinData : ${joinData}=====`);
@@ -68,7 +69,7 @@ io.sockets.on("connection", (socket) => {
 
       /**공유방 이미지 목록 클라이언트에게 전달 */
       io.to(socket.id).emit("join", emit_data);
-      console.log(`기존 사진 전송 - ${emit_data.img_cnt}`);
+      console.log(`기존 사진 전송 - ${emit_data.img_cnt}개`);
 
       /**join할 때 친구목록 업데이트 */
       await User.updateOne(
@@ -96,12 +97,34 @@ io.sockets.on("connection", (socket) => {
   /**방 멤버들에게 자신의 정보 전달 */
   socket.on("participate", async (memberData) => {
     console.log(`=====participate=====`);
-    // console.log(`typeof : ${typeof memberData}`);
-    // console.log(`memberData : ${JSON.stringify(memberData)}`);
+    console.log(`typeof : ${typeof memberData}`);
+    console.log(`memberData : ${JSON.stringify(memberData)}`);
+    console.log(`memberData : ${memberData.id}`);
+    console.log(`nickname : ${memberData.nickname}`);
     //roomIdx 찾기
-    const user = await User.findOne({ id: memberData.id }).exec();
-    const roomIdx = user.roomIdx;
-    io.to(roomIdx).emit("participate", memberData);
+    const room = await Room.findOne({
+      members: { $in: [memberData.id] },
+    }).exec();
+    console.log(`${room.members} type :${typeof room.members} `);
+    console.log(`${room.roomIdx} type :${typeof room.roomIdx}`);
+    let emitMembers = {};
+    await User.find(
+      { id: { $in: room.members } },
+      { _id: 0, id: 1, nickname: 1, picture: 1 },
+      function (err, docs) {
+        emitMembers = {
+          friends_list: docs,
+        };
+        console.log(emitMembers);
+        io.to(room.roomIdx).emit("participate", emitMembers);
+      }
+    ).clone();
+
+    // const user = await User.findOne({ id: memberData.id }).exec();
+    // if (user) {
+    //   const roomIdx = user.roomIdx;
+    //   io.to(roomIdx).emit("participate", memberData);
+    // }
   });
 
   /**다른 유저들에게 사진 전송 */
@@ -132,7 +155,10 @@ io.sockets.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    console.log(`Socket disconnected : ${socket.id}`);
+    socketCnt--;
+    console.log(
+      `Socket disconnected : ${socket.id} | 현재 소켓 수 : ${socketCnt} |`
+    );
   });
 });
 
