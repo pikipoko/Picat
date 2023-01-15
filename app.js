@@ -41,15 +41,16 @@ io.sockets.on("connection", (socket) => {
 
   /**공유방 접속 */
   socket.on("join", async (joinData) => {
-    console.log(`====joinData : ${typeof joinData}`);
+    console.log(`=====joinData : ${joinData}=====`);
     if (joinData) {
-      console.log(`---${joinData.id} -> join 요청`);
+      console.log(`${joinData.id} -> join 요청`);
       const friendList = joinData.elements.map((obj) => obj.id);
       const user = await User.findOne({ id: joinData.id }).exec();
-      let roomIdx = 0;
-      if (user) {
-        if (user.roomIdx) roomIdx = user.roomIdx;
-      }
+      const roomIdx = user.roomIdx;
+      // let roomIdx = 0;
+      // if (user) {
+      //   if (user.roomIdx) roomIdx = user.roomIdx;
+      // }
       console.log(`friendList : [${friendList}] `);
       console.log(`user(${joinData.id}) joined - room:${roomIdx}`);
 
@@ -67,7 +68,7 @@ io.sockets.on("connection", (socket) => {
 
       /**공유방 이미지 목록 클라이언트에게 전달 */
       io.to(socket.id).emit("join", emit_data);
-      console.log(emit_data.img_cnt);
+      console.log(`기존 사진 전송 - ${emit_data.img_cnt}`);
 
       /**join할 때 친구목록 업데이트 */
       await User.updateOne(
@@ -78,14 +79,36 @@ io.sockets.on("connection", (socket) => {
           },
         }
       ).then(() => {
-        console.log(`${user.nickname}의 친구목록 업데이트 완료`);
+        console.log(`=====${user.nickname}의 친구목록 업데이트 완료=====`);
       });
+
+      /**방 멤버들에게 신규멤버 정보 전달 */
+      // const memberData = {
+      //   id: user.id,
+      //   nickname: user.nickname,
+      //   picture: user.picture,
+      // };
+      // console.log(`=====새 멤버 정보 : ${JSON.stringify(memberData)}`);
+      // io.to(roomIdx).emit("participate", memberData);
     }
+  });
+
+  /**방 멤버들에게 자신의 정보 전달 */
+  socket.on("participate", async (memberData) => {
+    console.log(`=====participate=====`);
+    // console.log(`typeof : ${typeof memberData}`);
+    // console.log(`memberData : ${JSON.stringify(memberData)}`);
+    //roomIdx 찾기
+    const user = await User.findOne({ id: memberData.id }).exec();
+    const roomIdx = user.roomIdx;
+    io.to(roomIdx).emit("participate", memberData);
   });
 
   /**다른 유저들에게 사진 전송 */
   socket.on("image", async (data) => {
-    console.log("===이미지 이벤트 : ", data.img_cnt, data.id);
+    console.log(
+      `=====image event | 보낸사람: ${data.id}, 업로드 수:${data.img_cnt}=====`
+    );
     const user = await User.findOne({ id: data.id }).exec();
 
     const roomIdx = user.roomIdx;
