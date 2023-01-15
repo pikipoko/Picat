@@ -20,14 +20,15 @@ const upload = multer({
       const kid = req.headers.kid;
       const user = await User.findOne({ id: parseInt(kid) }).exec();
       const roomIdx = user.roomIdx;
+      console.log(`${kid} ${roomIdx}`);
       cb(
         null,
-        roomIdx.toString() +
-          "/" +
+        `${roomIdx}/${
           Math.floor(Math.random() * 1000).toString() +
           Date.now() +
           "." +
           file.originalname.split(".").pop()
+        }`
       );
     },
   }),
