@@ -21,6 +21,7 @@ const { uploadImage } = require("./routes/uploadImage");
 const { filter } = require("./routes/filter");
 
 const { allowCrossDomain } = require("./config/allowCrossDomain");
+const { checkOutTheRoom, checkInTheRoom } = require("./config/checkInOut");
 
 /**공통 미들웨어 장착*/
 app.use(express.json());
@@ -93,8 +94,14 @@ io.sockets.on("connection", (socket) => {
       } ${data.id}`
     );
     io.to(roomIdx).emit("image", data);
-    // io.sockets.in(roomIdx).emit("image", data);
-    // io.emit("image", data); //모두에게 전송
+  });
+
+  /**방 나가기 */
+  socket.on("exit", (id) => {
+    async checkOutTheRoom(id)
+    async checkInTheRoom(id)
+
+    io.to(roomIdx).emit("exit", id);
   });
 
   socket.on("disconnect", () => {
