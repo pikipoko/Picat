@@ -62,6 +62,9 @@ io.sockets.on("connection", (socket) => {
     /**공유방 이미지 목록 클라이언트에게 전달 */
     io.to(socket.id).emit("join", emit_data);
     console.log(emit_data.img_cnt);
+
+    /**join할 때 친구목록 업데이트 */
+    // await user.updateOne()
   });
 
   /**다른 유저들에게 사진 전송 */
@@ -89,7 +92,7 @@ io.sockets.on("connection", (socket) => {
 mongoose.set("strictQuery", true);
 mongoose
   .connect(process.env.MONGODB_URL, {
-    dbName: "picat-2nd", // 접속할 데이터베이스
+    dbName: "picat", // 접속할 데이터베이스
   })
   .then(() => {
     console.log("MongoDB 연결 성공");

@@ -20,7 +20,7 @@ const uploadImageToS3 = (imageUrl, fileName) => {
         .pipe(fs.createWriteStream(`config/users/${fileName}.jpg`))
         .on("finish", async (data) => {
           const param = {
-            Bucket: "picat-2nd",
+            Bucket: "picat-3rd",
             Key: `users/${fileName}.jpg`, // s3 bucket 에다가 다운.
             ACL: "public-read",
             Body: fs.createReadStream(`config/users/${fileName}.jpg`), // 우리 서버에다가 다운
@@ -43,16 +43,20 @@ let login = async function (req, res, next) {
   const findRoom = await Room.findOne({ roomIdx: req.body.id }).exec();
 
   /**친구 id 저장 */
-  const elements = [];
-  for (let i = 0; i < userInfo.elements.length; i++) {
-    elements.push(userInfo.elements[i].id);
-  }
+  const elements = userInfo.elements.map((obj) => obj.id);
+  const friendList = userInfo.elements.map((obj) => obj.profile_nickname);
+  // for (let i = 0; i < userInfo.elements.length; i++) {
+  //   elements.push(userInfo.elements[i].id);
+  // }
+  console.log(`카카오 친구목록 - 총${friendList.length}명 [${friendList}]`);
+  console.log(`(elements) - 총${elements.length}명 [${elements}]`);
 
   /**기존 사용자면 업데이트 */
   if (findUser) {
-    uploadImageToS3(userInfo.picture, userInfo.id);
+    console.log(`기존 사용자 입니다 - id : ${userInfo.id}`);
+    await uploadImageToS3(userInfo.picture, userInfo.id);
     await User.updateOne(
-      { id: req.body.id },
+      { id: userInfo.id },
       {
         $set: {
           nickname: userInfo.nickname,

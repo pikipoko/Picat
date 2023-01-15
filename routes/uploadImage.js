@@ -50,7 +50,7 @@ async function uploadImage(req, res, next) {
     let detectParams = {
       Image: {
         S3Object: {
-          Bucket: "picat-2nd",
+          Bucket: "picat-3rd",
           Name: preImage.split("/")[3],
         },
       },
@@ -69,13 +69,13 @@ async function uploadImage(req, res, next) {
           const compareParams = {
             SourceImage: {
               S3Object: {
-                Bucket: "picat-2nd",
+                Bucket: "picat-3rd",
                 Name: `users/${uploaderFriends[friendIdx]}.jpg`,
               },
             },
             TargetImage: {
               S3Object: {
-                Bucket: "picat-2nd",
+                Bucket: "picat-3rd",
                 Name: preImage.split("/")[3],
               },
             },
