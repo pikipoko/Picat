@@ -38,33 +38,47 @@ io.sockets.on("connection", (socket) => {
   console.log(`Socket connected ${socket.id}`);
 
   /**공유방 접속 */
-  socket.on("join", async (id) => {
-    console.log(`${id} join 요청`);
-    const user = await User.findOne({ id: id }).exec();
-    let roomIdx = 0;
-    if (user) {
-      if (user.roomIdx) roomIdx = user.roomIdx;
+  socket.on("join", async (joinData) => {
+    console.log(`====joinData : ${typeof joinData}`);
+    if (joinData) {
+      console.log(`---${joinData.id} -> join 요청`);
+      const friendList = joinData.elements.map((obj) => obj.id);
+      const user = await User.findOne({ id: joinData.id }).exec();
+      let roomIdx = 0;
+      if (user) {
+        if (user.roomIdx) roomIdx = user.roomIdx;
+      }
+      console.log(`friendList : [${friendList}] `);
+      console.log(`user(${joinData.id}) joined - room:${roomIdx}`);
+
+      /**방 접속 */
+      socket.join(roomIdx);
+      const imagesInRoom = await Img.find(
+        { roomIdx: roomIdx },
+        { _id: 0, url: 1 }
+      ).exec();
+
+      const emit_data = {
+        img_list: imagesInRoom,
+        img_cnt: imagesInRoom.length,
+      };
+
+      /**공유방 이미지 목록 클라이언트에게 전달 */
+      io.to(socket.id).emit("join", emit_data);
+      console.log(emit_data.img_cnt);
+
+      /**join할 때 친구목록 업데이트 */
+      await User.updateOne(
+        { id: joinData.id },
+        {
+          $set: {
+            elements: friendList,
+          },
+        }
+      ).then(() => {
+        console.log(`${user.nickname}의 친구목록 업데이트 완료`);
+      });
     }
-    console.log(`user(${id}) joined - room:${roomIdx}`);
-
-    /**방 접속 */
-    socket.join(roomIdx);
-    const imagesInRoom = await Img.find(
-      { roomIdx: roomIdx },
-      { _id: 0, url: 1 }
-    ).exec();
-
-    const emit_data = {
-      img_list: imagesInRoom,
-      img_cnt: imagesInRoom.length,
-    };
-
-    /**공유방 이미지 목록 클라이언트에게 전달 */
-    io.to(socket.id).emit("join", emit_data);
-    console.log(emit_data.img_cnt);
-
-    /**join할 때 친구목록 업데이트 */
-    // await user.updateOne()
   });
 
   /**다른 유저들에게 사진 전송 */
