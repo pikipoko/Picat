@@ -18,6 +18,7 @@ const port = 5000;
 const { login } = require("./routes/login");
 const { inviteFriends } = require("./routes/friends");
 const { uploadImage } = require("./routes/uploadImage");
+const { filter } = require("./routes/filter");
 
 const { allowCrossDomain } = require("./config/allowCrossDomain");
 
@@ -30,36 +31,54 @@ app.use(allowCrossDomain);
 app.post("/image", upload.array("image"), uploadImage); /**이미지 업로드 */
 app.post("/app/users/kakao", login); /**카카오톡을 통한 로그인 */
 app.post("/friends", inviteFriends); /**친구 초대 */
+app.get("/filter", filter); /**친구 초대 */
 
 /**소켓 통신 */
 io.sockets.on("connection", (socket) => {
   console.log(`Socket connected ${socket.id}`);
 
   /**공유방 접속 */
-  socket.on("join", async (id) => {
-    console.log(`${id} join 요청`);
-    const user = await User.findOne({ id: id }).exec();
-    let roomIdx = 0;
-    if (user) {
-      if (user.roomIdx) roomIdx = user.roomIdx;
+  socket.on("join", async (joinData) => {
+    console.log(`====joinData : ${typeof joinData}`);
+    if (joinData) {
+      console.log(`---${joinData.id} -> join 요청`);
+      const friendList = joinData.elements.map((obj) => obj.id);
+      const user = await User.findOne({ id: joinData.id }).exec();
+      let roomIdx = 0;
+      if (user) {
+        if (user.roomIdx) roomIdx = user.roomIdx;
+      }
+      console.log(`friendList : [${friendList}] `);
+      console.log(`user(${joinData.id}) joined - room:${roomIdx}`);
+
+      /**방 접속 */
+      socket.join(roomIdx);
+      const imagesInRoom = await Img.find(
+        { roomIdx: roomIdx },
+        { _id: 0, url: 1 }
+      ).exec();
+
+      const emit_data = {
+        img_list: imagesInRoom,
+        img_cnt: imagesInRoom.length,
+      };
+
+      /**공유방 이미지 목록 클라이언트에게 전달 */
+      io.to(socket.id).emit("join", emit_data);
+      console.log(emit_data.img_cnt);
+
+      /**join할 때 친구목록 업데이트 */
+      await User.updateOne(
+        { id: joinData.id },
+        {
+          $set: {
+            elements: friendList,
+          },
+        }
+      ).then(() => {
+        console.log(`${user.nickname}의 친구목록 업데이트 완료`);
+      });
     }
-    console.log(`user(${id}) joined - room:${roomIdx}`);
-
-    /**방 접속 */
-    socket.join(roomIdx);
-    const imagesInRoom = await Img.find(
-      { roomIdx: roomIdx },
-      { _id: 0, url: 1 }
-    ).exec();
-
-    const emit_data = {
-      img_list: imagesInRoom,
-      img_cnt: imagesInRoom.length,
-    };
-
-    /**공유방 이미지 목록 클라이언트에게 전달 */
-    io.to(socket.id).emit("join", emit_data);
-    console.log(emit_data.img_cnt);
   });
 
   /**다른 유저들에게 사진 전송 */
@@ -87,7 +106,7 @@ io.sockets.on("connection", (socket) => {
 mongoose.set("strictQuery", true);
 mongoose
   .connect(process.env.MONGODB_URL, {
-    dbName: "picat-2nd", // 접속할 데이터베이스
+    dbName: "picat", // 접속할 데이터베이스
   })
   .then(() => {
     console.log("MongoDB 연결 성공");

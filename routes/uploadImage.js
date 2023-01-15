@@ -2,7 +2,7 @@ const User = require("../models/User");
 const Img = require("../models/Image");
 const Room = require("../models/Room");
 // const compareFaces = require("../config/compareFaces");
-
+////
 const AWS = require("aws-sdk");
 const rekognition = new AWS.Rekognition({ region: "ap-northeast-2" });
 
@@ -38,7 +38,7 @@ async function uploadImage(req, res, next) {
       console.log(`${count} DB 저장 완료`);
       count++;
       if (count == images.length * (uploaderFriends.length + 1)) {
-        console.log(`처음 save res 보냄`);
+        console.log(`${count} 처음 save res 보냄`);
         res.json({
           url: resImages,
           img_cnt: images.length,
@@ -50,7 +50,7 @@ async function uploadImage(req, res, next) {
     let detectParams = {
       Image: {
         S3Object: {
-          Bucket: "picat-2nd",
+          Bucket: "picat-3rd",
           Name: preImage.split("/")[3],
         },
       },
@@ -69,13 +69,13 @@ async function uploadImage(req, res, next) {
           const compareParams = {
             SourceImage: {
               S3Object: {
-                Bucket: "picat-2nd",
+                Bucket: "picat-3rd",
                 Name: `users/${uploaderFriends[friendIdx]}.jpg`,
               },
             },
             TargetImage: {
               S3Object: {
-                Bucket: "picat-2nd",
+                Bucket: "picat-3rd",
                 Name: preImage.split("/")[3],
               },
             },
@@ -136,7 +136,7 @@ async function uploadImage(req, res, next) {
                         count ==
                         images.length * (uploaderFriends.length + 1)
                       ) {
-                        console.log(`update 후 res 보냄`);
+                        console.log(`${count} update 후 res 보냄`);
                         res.json({
                           url: resImages,
                           img_cnt: images.length,
@@ -148,7 +148,7 @@ async function uploadImage(req, res, next) {
                     count++;
                     console.log(`${count} 친구X`);
                     if (count == images.length * (uploaderFriends.length + 1)) {
-                      console.log(`친구X res 보냄`);
+                      console.log(`${count} 친구X res 보냄`);
                       res.json({
                         url: resImages,
                         img_cnt: images.length,
@@ -163,7 +163,7 @@ async function uploadImage(req, res, next) {
             count++;
             console.log(`${count} 얼굴X`);
             if (count == images.length * (uploaderFriends.length + 1)) {
-              console.log(`얼굴X res 보냄`);
+              console.log(`${count} 얼굴X res 보냄`);
               res.json({
                 url: resImages,
                 img_cnt: images.length,
