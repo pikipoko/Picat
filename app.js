@@ -7,6 +7,7 @@ const mongoose = require("mongoose");
 /**Models */
 const User = require("./models/User");
 const Img = require("./models/Image");
+const Room = require("./models/Room");
 
 /**서버 설정 */
 const app = express();
@@ -97,11 +98,14 @@ io.sockets.on("connection", (socket) => {
   });
 
   /**방 나가기 */
-  socket.on("exit", (id) => {
-    async checkOutTheRoom(id)
-    async checkInTheRoom(id)
+  socket.on("exit", async (id) => {
+    const user = await User.findOne({ id: id }).exec();
+    const originalRoom = await Room.findOne({ roomIdx: user.roomIdx }).exec();
 
-    io.to(roomIdx).emit("exit", id);
+    await checkOutTheRoom(id);
+    await checkInTheRoom(id);
+
+    io.to(originalRoom.roomIdx).emit("exit", id);
   });
 
   socket.on("disconnect", () => {
