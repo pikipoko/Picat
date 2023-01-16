@@ -7,9 +7,6 @@ const AWS = require("aws-sdk");
 const rekognition = new AWS.Rekognition({ region: "ap-northeast-2" });
 
 async function uploadImage(req, res, next) {
-  console.log(
-    "==========================================================================================="
-  );
   let count = 0;
   let resImages = [];
 
@@ -46,12 +43,12 @@ async function uploadImage(req, res, next) {
         });
       }
     });
-
+    const targetImgName = preImage.split("/")[3];
     let detectParams = {
       Image: {
         S3Object: {
           Bucket: "picat-3rd",
-          Name: uploader.roomIdx.toString() + "/" + preImage.split("/")[4],
+          Name: targetImgName,
         },
       },
     };
@@ -76,8 +73,7 @@ async function uploadImage(req, res, next) {
             TargetImage: {
               S3Object: {
                 Bucket: "picat-3rd",
-                Name:
-                  uploader.roomIdx.toString() + "/" + preImage.split("/")[4],
+                Name: targetImgName,
               },
             },
             SimilarityThreshold: 70,
@@ -92,7 +88,6 @@ async function uploadImage(req, res, next) {
                 } else {
                   if (response.FaceMatches.length > 0) {
                     response.FaceMatches.forEach(async (data) => {
-                      console.log(data.Similarity);
                       if (data.Similarity > 90) {
                         if (
                           friendsInImage.filter(
