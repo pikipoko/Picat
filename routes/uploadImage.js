@@ -51,7 +51,7 @@ async function uploadImage(req, res, next) {
       Image: {
         S3Object: {
           Bucket: "picat-3rd",
-          Name: preImage.split("/")[3],
+          Name: uploader.roomIdx.toString() + "/" + preImage.split("/")[4],
         },
       },
     };
@@ -76,7 +76,8 @@ async function uploadImage(req, res, next) {
             TargetImage: {
               S3Object: {
                 Bucket: "picat-3rd",
-                Name: preImage.split("/")[3],
+                Name:
+                  uploader.roomIdx.toString() + "/" + preImage.split("/")[4],
               },
             },
             SimilarityThreshold: 70,

@@ -4,22 +4,29 @@ const { checkOutTheRoom, checkInTheRoom } = require("../config/checkInOut");
 
 let inviteFriends = async function (req, res, next) {
   let isSuccess = true;
-  const friends = req.body.friends;
+  let friendsReq = req.body.friends;
+  console.log(`request 받은 친구 목록 : ${friendsReq} ${typeof friendsReq}`);
+  if (typeof friendsReq == typeof "typeString") {
+    console.log(`string을 [ 숫자 ]로 바꿔줌`);
+    friendsReq = [parseInt(req.body.friends)];
+  }
 
   const host = await User.findOne({ id: req.body.id }).exec();
   if (host) {
     const hostRoom = await Room.findOne({ roomIdx: host.roomIdx });
     const newMembers = hostRoom.members;
 
-    for (let i = 0; i < friends.length; i++) {
-      await checkOutTheRoom(friends[i]);
+    for (let i = 0; i < friendsReq.length; i++) {
+      preFriend = parseInt(friendsReq[i]);
+
+      await checkOutTheRoom(preFriend);
       await User.findOneAndUpdate(
-        { id: friends[i] },
+        { id: preFriend },
         { $set: { roomIdx: hostRoom.roomIdx } }
       ).then(() => {
-        console.log(`${friends[i]} 유저 업데이트 완료`);
-        if (!newMembers.includes(friends[i])) {
-          newMembers.push(friends[i]);
+        console.log(`${preFriend} 유저 업데이트 완료`);
+        if (!newMembers.includes(preFriend)) {
+          newMembers.push(preFriend);
         }
       });
     }

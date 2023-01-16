@@ -3,7 +3,9 @@ const Img = require("../models/Image");
 const Room = require("../models/Room");
 
 /**기존 방 나가기 */
-async function checkOutTheRoom(id) {
+async function checkOutTheRoom(input_id) {
+  const id = parseInt(input_id);
+  console.log(`${id}, ${typeof id}`);
   const user = await User.findOne({ id: id }).exec();
   const originalRoom = await Room.findOne({ roomIdx: user.roomIdx });
   let updateMembers = originalRoom.members;
