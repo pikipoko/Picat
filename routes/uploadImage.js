@@ -1,56 +1,176 @@
 const User = require("../models/User");
 const Img = require("../models/Image");
-const { getDescriptorsFromDB } = require("../config/face_api");
+const Room = require("../models/Room");
+// const compareFaces = require("../config/compareFaces");
+////
+const AWS = require("aws-sdk");
+const rekognition = new AWS.Rekognition({ region: "ap-northeast-2" });
 
-let uploadImage = async function (req, res, next) {
-  try {
-    const data = req.files;
-    let images = [];
-    let imgCnt = 0;
-    let checkResult = [];
-    const id = parseInt(req.body.id);
-    console.log("====업로드한 사람 id : ", id);
+async function uploadImage(req, res, next) {
+  let count = 0;
+  let resImages = [];
 
-    for (let i = 0; i < data.length; i++) {
-      /* mongo DB에 id, url 저장하는 코드 추가 필요 */
-      const newImg = new Img();
-      let user = await User.findOne({ id: id }).exec();
-      let roomIdx = user.roomIdx;
+  const images = req.files;
+  const uploaderId = parseInt(req.body.id);
+  let friendsInImage = [];
 
-      newImg.roomIdx = roomIdx;
-      newImg.id = id;
-      newImg.url = data[i].location;
+  const uploader = await User.findOne({ id: uploaderId });
+  const uploaderFriends = uploader.elements;
+  uploaderFriends.push(uploaderId);
+  const room = await Room.findOne({ roomIdx: uploader.roomIdx });
+  const roomMembers = room.members;
 
-      images[imgCnt] = data[i].location;
-      await newImg
-        .save() //실제로 저장된 유저값 불러옴
-        .then(async (user) => {
-          const DescriptorsFromDB = await getDescriptorsFromDB(
-            data[imgCnt].location,
-            id
-          );
-          if (DescriptorsFromDB) checkResult.push(DescriptorsFromDB);
-          console.log(`[${imgCnt}] DB저장 ${checkResult}`);
-          imgCnt++;
-        })
-        .catch((err) => {
-          // res.json({
-          //   message: "이미지 생성정보 db저장실패",
-          // });
-          console.log(`[${imgCnt}] DB저장 실패${checkResult}`);
-          console.error(err);
+  for (let imageIdx = 0; imageIdx < images.length; imageIdx++) {
+    let preImage = images[imageIdx].location;
+    resImages[imageIdx] = preImage;
+    let usersInImage = [];
+
+    // 사진도 유저와 같은 방에 있어야 함.
+    const newImg = new Img();
+    newImg.roomIdx = uploader.roomIdx;
+    newImg.id = uploaderId;
+    newImg.url = preImage;
+    newImg.users = usersInImage;
+    await newImg.save().then(() => {
+      console.log(`${count} DB 저장 완료`);
+      count++;
+      if (count == images.length * (uploaderFriends.length + 1)) {
+        console.log(`${count} 처음 save res 보냄`);
+        res.json({
+          url: resImages,
+          img_cnt: images.length,
+          friends: friendsInImage,
         });
-    }
-
-    res.json({
-      url: images,
-      img_cnt: imgCnt,
-      friends: checkResult,
+      }
     });
-  } catch (error) {
-    console.error(error);
-    next(error);
+    const targetImgName = preImage.split("/")[3];
+    let detectParams = {
+      Image: {
+        S3Object: {
+          Bucket: "picat-3rd",
+          Name: targetImgName,
+        },
+      },
+    };
+
+    rekognition.detectFaces(detectParams, async function (err, response) {
+      if (err) {
+        console.log("detect error");
+        console.log(err, err.stack);
+      } else {
+        for (
+          let friendIdx = 0;
+          friendIdx < uploaderFriends.length;
+          friendIdx++
+        ) {
+          const compareParams = {
+            SourceImage: {
+              S3Object: {
+                Bucket: "picat-3rd",
+                Name: `users/${uploaderFriends[friendIdx]}.jpg`,
+              },
+            },
+            TargetImage: {
+              S3Object: {
+                Bucket: "picat-3rd",
+                Name: targetImgName,
+              },
+            },
+            SimilarityThreshold: 70,
+          };
+          if (response.FaceDetails.length > 0) {
+            rekognition.compareFaces(
+              compareParams,
+              async function (err, response) {
+                if (err) {
+                  console.log("compare error");
+                  console.log(err);
+                } else {
+                  if (response.FaceMatches.length > 0) {
+                    response.FaceMatches.forEach(async (data) => {
+                      if (data.Similarity > 90) {
+                        if (
+                          friendsInImage.filter(
+                            (friend) => friend.id == uploaderFriends[friendIdx]
+                          ).length == 0 &&
+                          !roomMembers.includes(uploaderFriends[friendIdx])
+                        ) {
+                          let friend = await User.findOne({
+                            id: uploaderFriends[friendIdx],
+                          }).exec();
+
+                          friendsInImage.push({
+                            nickname: friend.nickname,
+                            id: friend.id,
+                            picture: friend.picture,
+                          });
+                        }
+                        if (
+                          !usersInImage.includes(uploaderFriends[friendIdx])
+                        ) {
+                          usersInImage.push(uploaderFriends[friendIdx]);
+                        }
+                      }
+
+                      newImg.users = usersInImage;
+                    });
+                    await Img.updateOne(
+                      {
+                        url: preImage,
+                      },
+                      {
+                        $push: {
+                          users: uploaderFriends[friendIdx],
+                        },
+                      }
+                    ).then(() => {
+                      console.log(
+                        `| ${count} | ${imageIdx} | ${friendIdx} |DB 업데이트 완료`
+                      );
+                      count++;
+                      if (
+                        count ==
+                        images.length * (uploaderFriends.length + 1)
+                      ) {
+                        console.log(`${count} update 후 res 보냄`);
+                        res.json({
+                          url: resImages,
+                          img_cnt: images.length,
+                          friends: friendsInImage,
+                        });
+                      }
+                    });
+                  } else {
+                    count++;
+                    console.log(`${count} 친구X`);
+                    if (count == images.length * (uploaderFriends.length + 1)) {
+                      console.log(`${count} 친구X res 보냄`);
+                      res.json({
+                        url: resImages,
+                        img_cnt: images.length,
+                        friends: friendsInImage,
+                      });
+                    }
+                  }
+                }
+              }
+            );
+          } else {
+            count++;
+            console.log(`${count} 얼굴X`);
+            if (count == images.length * (uploaderFriends.length + 1)) {
+              console.log(`${count} 얼굴X res 보냄`);
+              res.json({
+                url: resImages,
+                img_cnt: images.length,
+                friends: friendsInImage,
+              });
+            }
+          }
+        }
+      }
+    });
   }
-};
+}
 
 module.exports = { uploadImage };

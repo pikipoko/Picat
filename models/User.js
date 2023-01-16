@@ -10,14 +10,15 @@ const userSchema = new Schema(
     email: String,
     roomIdx: Number,
     total_count: Number,
-    descriptions: {
-      type: Array,
-      required: true,
-    },
+    // descriptions: {
+    //   type: Array,
+    //   required: true,
+    // },
     elements: {
       type: Array,
       required: true,
     },
+    my_device_id: String,
     // elements: [
     // new Schema({
     //   id: Number,

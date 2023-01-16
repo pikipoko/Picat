@@ -1,30 +1,61 @@
 const User = require("../models/User");
+const Room = require("../models/Room");
+const { checkOutTheRoom, checkInTheRoom } = require("../config/checkInOut");
+const pushAlarm = require("./pushAlarm");
 
 let inviteFriends = async function (req, res, next) {
   let isSuccess = true;
-  const friend_ids = req.body.friends;
-  const user = await User.findOne({ id: req.body.id }).exec();
-  const room = user.roomIdx;
-  for (let i = 0; i < friend_ids.length; i++) {
-    let pre_friend = await User.findOne({ id: friend_ids[i] }).exec();
-    if (pre_friend) {
-      await User.updateOne(
-        { id: friend_ids[i] },
-        {
-          $set: {
-            roomIdx: room,
-          },
-        }
-      );
-      console.log(`${pre_friend.nickname}님 - ${room} 공유방으로 이동 완료`);
-    } else {
-      console.log(`사용자[${friend_ids[i]}]를 찾을 수 없습니다.`);
-    }
+  let friendsReq = req.body.friends;
+  console.log(`request 받은 친구 목록 : ${friendsReq} ${typeof friendsReq}`);
+  if (typeof friendsReq == typeof "typeString") {
+    console.log(`string을 [ 숫자 ]로 바꿔줌`);
+    friendsReq = [parseInt(req.body.friends)];
   }
 
-  res.json({
-    isSuccess: isSuccess,
-  });
+  const host = await User.findOne({ id: req.body.id }).exec();
+  if (host) {
+    const hostRoom = await Room.findOne({ roomIdx: host.roomIdx });
+    const newMembers = hostRoom.members;
+
+    for (let i = 0; i < friendsReq.length; i++) {
+      preFriend = parseInt(friendsReq[i]);
+
+      await checkOutTheRoom(preFriend);
+      await User.findOneAndUpdate(
+        { id: preFriend },
+        { $set: { roomIdx: hostRoom.roomIdx } }
+      ).then(() => {
+        console.log(`${preFriend} 유저 업데이트 완료, 푸시알람 시작`);
+        if (!newMembers.includes(preFriend)) {
+          newMembers.push(preFriend);
+        }
+        pushAlarm(
+          preFriend.my_device_id,
+          `${preFriend.nickname}에게 보내는 푸시알람`,
+          `${host.nickname}님이 ${host.roomIdx} 방으로 초대`
+        );
+      });
+    }
+    // 호스트 방 업데이트
+    await Room.updateOne(
+      { roomIdx: host.roomIdx },
+      {
+        $set: {
+          members: newMembers,
+          roomMemberCnt: newMembers.length,
+        },
+      }
+    );
+
+    res.json({
+      isSuccess: isSuccess,
+    });
+  } else {
+    isSuccess = false;
+    res.json({
+      isSuccess: isSuccess,
+    });
+  }
 };
 
 module.exports = { inviteFriends };

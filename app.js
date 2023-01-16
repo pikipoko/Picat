@@ -7,6 +7,7 @@ const mongoose = require("mongoose");
 /**Models */
 const User = require("./models/User");
 const Img = require("./models/Image");
+const Room = require("./models/Room");
 
 /**서버 설정 */
 const app = express();
@@ -18,11 +19,10 @@ const port = 5000;
 const { login } = require("./routes/login");
 const { inviteFriends } = require("./routes/friends");
 const { uploadImage } = require("./routes/uploadImage");
+const { filter } = require("./routes/filter");
 
-const { loadModels } = require("./config/face_api");
 const { allowCrossDomain } = require("./config/allowCrossDomain");
-
-loadModels();
+const { checkOutTheRoom, checkInTheRoom } = require("./config/checkInOut");
 
 /**공통 미들웨어 장착*/
 app.use(express.json());
@@ -33,54 +33,97 @@ app.use(allowCrossDomain);
 app.post("/image", upload.array("image"), uploadImage); /**이미지 업로드 */
 app.post("/app/users/kakao", login); /**카카오톡을 통한 로그인 */
 app.post("/friends", inviteFriends); /**친구 초대 */
+app.get("/filter", filter); /**친구 초대 */
 
+let socketCnt = 0;
 /**소켓 통신 */
 io.sockets.on("connection", (socket) => {
-  console.log(`Socket connected ${socket.id}`);
-
+  socketCnt++;
+  console.log(`Socket connected ${socket.id} | 현재 소켓 수 : ${socketCnt} |`);
   /**공유방 접속 */
-  socket.on("join", async (id) => {
-    console.log(`${id} join 요청`);
-    const user = await User.findOne({ id: id }).exec();
-    let roomIdx = 0;
-    if (user) {
-      if (user.roomIdx) roomIdx = user.roomIdx;
+  socket.on("join", async (joinData) => {
+    if (joinData) {
+      const friendList = joinData.elements.map((obj) => obj.id);
+      const user = await User.findOne({ id: joinData.id }).exec();
+      const roomIdx = user.roomIdx;
+      console.log(`friendList : [${friendList}] `);
+      console.log(`${user.nickname} joined - room:${roomIdx}`);
+
+      /**방 접속 */
+      socket.join(roomIdx);
+      const imagesInRoom = await Img.find(
+        { roomIdx: roomIdx },
+        { _id: 0, url: 1 }
+      ).exec();
+
+      const emit_data = {
+        img_list: imagesInRoom,
+        img_cnt: imagesInRoom.length,
+      };
+
+      /**공유방 이미지 목록 클라이언트에게 전달 */
+      io.to(socket.id).emit("join", emit_data);
+      console.log(`기존 사진 전송 - ${emit_data.img_cnt}개`);
+
+      /**join할 때 친구목록 업데이트 */
+      await User.updateOne(
+        { id: joinData.id },
+        {
+          $set: {
+            elements: friendList,
+          },
+        }
+      ).then(() => {
+        console.log(`| ${user.nickname}의 친구목록 업데이트 완료 |`);
+      });
     }
-    console.log(`user(${id}) joined - room:${roomIdx}`);
+  });
 
-    /**방 접속 */
-    socket.join(roomIdx);
-    const imagesInRoom = await Img.find(
-      { roomIdx: roomIdx },
-      { _id: 0, url: 1 }
-    ).exec();
-
-    const emit_data = {
-      img_list: imagesInRoom,
-      img_cnt: imagesInRoom.length,
-    };
-
-    /**공유방 이미지 목록 클라이언트에게 전달 */
-    io.to(socket.id).emit("join", emit_data);
-    console.log(emit_data);
+  /**방 멤버들에게 자신의 정보 전달 */
+  socket.on("participate", async (memberData) => {
+    console.log(`\n| participate |`);
+    const room = await Room.findOne({
+      members: { $in: [memberData.id] },
+    }).exec();
+    let emitMembers = {};
+    await User.find(
+      { id: { $in: room.members } },
+      { _id: 0, id: 1, nickname: 1, picture: 1 },
+      function (err, docs) {
+        emitMembers = {
+          friends_list: docs,
+        };
+        io.to(room.roomIdx).emit("participate", emitMembers);
+      }
+    ).clone();
   });
 
   /**다른 유저들에게 사진 전송 */
   socket.on("image", async (data) => {
     const user = await User.findOne({ id: data.id }).exec();
-
-    const roomIdx = user.roomIdx;
     console.log(
-      `${user.nickname} - ${typeof roomIdx} - ${roomIdx} -${data} ${
-        data.img_list
-      } ${data.id}`
+      `| image | 보낸사람: ${user.nickname}, 업로드 수:${data.img_cnt} |`
     );
-    io.sockets.in(roomIdx).emit("image", data);
-    // io.emit("image", images); //모두에게 전송
+    const roomIdx = user.roomIdx;
+    io.to(roomIdx).emit("image", data);
+  });
+
+  /**방 나가기 */
+  socket.on("exit", async (id) => {
+    const user = await User.findOne({ id: id }).exec();
+    const originalRoom = await Room.findOne({ roomIdx: user.roomIdx }).exec();
+
+    await checkOutTheRoom(id);
+    await checkInTheRoom(id);
+
+    io.to(originalRoom.roomIdx).emit("exit", id);
   });
 
   socket.on("disconnect", () => {
-    console.log(`Socket disconnected : ${socket.id}`);
+    socketCnt--;
+    console.log(
+      `Socket disconnected : ${socket.id} | 현재 소켓 수 : ${socketCnt} |`
+    );
   });
 });
 

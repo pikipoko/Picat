@@ -6,6 +6,10 @@ const imgSchema = new Schema({
   roomIdx: Number,
   id: Number,
   url: String,
+  users: {
+    type: Array,
+    required: true,
+  },
 });
 
 module.exports = mongoose.model("Image", imgSchema);
