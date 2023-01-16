@@ -19,7 +19,7 @@ let inviteFriends = async function (req, res, next) {
 
     for (let i = 0; i < friendsReq.length; i++) {
       preFriend = parseInt(friendsReq[i]);
-
+      const preUser = await User.findOne({ id: preFriend });
       await checkOutTheRoom(preFriend);
       await User.findOneAndUpdate(
         { id: preFriend },
@@ -30,9 +30,9 @@ let inviteFriends = async function (req, res, next) {
           newMembers.push(preFriend);
         }
         pushAlarm(
-          preFriend.my_device_id,
-          `${preFriend.nickname}에게 보내는 푸시알람`,
-          `${host.nickname}님이 ${host.roomIdx} 방으로 초대`
+          preUser.my_device_id,
+          `Picat 초대 알림`,
+          `${host.nickname}님이 초대하였습니다.`
         );
       });
     }
