@@ -17,7 +17,7 @@ const port = 5000;
 
 /**routes */
 const { login } = require("./routes/login");
-const { inviteFriends } = require("./routes/friends");
+const { inviteFriends, sendPushAlarm } = require("./routes/friends");
 const { uploadImage } = require("./routes/uploadImage");
 const { filter } = require("./routes/filter");
 
@@ -32,8 +32,9 @@ app.use(allowCrossDomain);
 /**라우터 */
 app.post("/image", upload.array("image"), uploadImage); /**이미지 업로드 */
 app.post("/app/users/kakao", login); /**카카오톡을 통한 로그인 */
-app.post("/friends", inviteFriends); /**친구 초대 */
-app.get("/filter", filter); /**친구 초대 */
+app.get("/filter", filter); /**필터 요청 */
+app.post("/friends", sendPushAlarm); /**초대 알람 푸시 알람 전송*/
+app.post("/accept", inviteFriends); /**초대 수락 */
 
 let socketCnt = 0;
 /**소켓 통신 */
@@ -116,11 +117,11 @@ io.sockets.on("connection", (socket) => {
   socket.on("exit", async (id) => {
     const user = await User.findOne({ id: id }).exec();
     const originalRoom = await Room.findOne({ roomIdx: user.roomIdx }).exec();
-    
+
     await checkOutTheRoom(id);
     await checkInTheRoom(id);
-    
-    console.log(`| exit | ${user.nickname}님이 방을 나갔습니다.`)
+
+    console.log(`| exit | ${user.nickname}님이 방을 나갔습니다.`);
     io.to(originalRoom.roomIdx).emit("exit", id);
   });
 

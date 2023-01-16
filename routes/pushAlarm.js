@@ -12,9 +12,9 @@ const firebaseConfig = {
   measurementId: process.env.FIREBASE_MEASUREMENTID,
 };
 
-const app = initializeApp(firebaseConfig);
+initializeApp(firebaseConfig);
 
-function pushAlarm(deviceId, jsonTitle, jsonBody) {
+function pushAlarm(deviceId, jsonTitle, jsonBody, host) {
   const options = {
     uri: "https://fcm.googleapis.com/fcm/send",
     method: "POST",
@@ -27,6 +27,12 @@ function pushAlarm(deviceId, jsonTitle, jsonBody) {
       notification: {
         title: jsonTitle,
         body: jsonBody,
+      },
+      data: {
+        id: host.id,
+        roomIdx: host.roomIdx,
+        picture: host.picture,
+        nickname: host.nickname,
       },
     },
   };

@@ -25,7 +25,7 @@ async function checkOutTheRoom(input_id) {
     }
   )
     .then(() => {
-      console.log(`${user.nickname}님 - 기존 방 checkout 완료`);
+      console.log(`| ${user.nickname}님 | 기존 방 checkout 완료 |`);
     })
     .catch((err) => {
       console.log(`기존 방 나가는 도중 에러 발생 : ${err}`);
