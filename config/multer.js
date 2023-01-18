@@ -16,7 +16,7 @@ const s3 = new S3Client({
 const upload = multer({
   storage: multerS3({
     s3,
-    bucket: "picat-3rd",
+    bucket: process.env.PICAT,
     acl: "public-read",
     key: async function (req, file, cb) {
       const s3URI =
