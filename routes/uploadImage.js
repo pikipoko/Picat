@@ -1,3 +1,4 @@
+require("dotenv");
 const User = require("../models/User");
 const Img = require("../models/Image");
 const Room = require("../models/Room");
@@ -32,10 +33,11 @@ async function uploadImage(req, res, next) {
     newImg.url = preImage;
     newImg.users = usersInImage;
     await newImg.save().then(() => {
-      console.log(`${count} DB 저장 완료`);
+      console.log(`| ${uploader.nickname} | ${count} DB 저장 완료`);
       count++;
       if (count == images.length * (uploaderFriends.length + 1)) {
-        console.log(`${count} 처음 save res 보냄`);
+        // if (count == images.length) {
+        // console.log(`${count} 처음 save res 보냄`);
         res.json({
           url: resImages,
           img_cnt: images.length,
@@ -47,7 +49,7 @@ async function uploadImage(req, res, next) {
     let detectParams = {
       Image: {
         S3Object: {
-          Bucket: "picat-3rd",
+          Bucket: process.env.PICAT,
           Name: targetImgName,
         },
       },
@@ -66,13 +68,13 @@ async function uploadImage(req, res, next) {
           const compareParams = {
             SourceImage: {
               S3Object: {
-                Bucket: "picat-3rd",
+                Bucket: process.env.PICAT,
                 Name: `users/${uploaderFriends[friendIdx]}.jpg`,
               },
             },
             TargetImage: {
               S3Object: {
-                Bucket: "picat-3rd",
+                Bucket: process.env.PICAT,
                 Name: targetImgName,
               },
             },
@@ -125,14 +127,14 @@ async function uploadImage(req, res, next) {
                       }
                     ).then(() => {
                       console.log(
-                        `| ${count} | ${imageIdx} | ${friendIdx} |DB 업데이트 완료`
+                        `| ${uploader.nickname} | ${count} | ${imageIdx} | ${friendIdx} |DB 업데이트 완료`
                       );
                       count++;
                       if (
                         count ==
                         images.length * (uploaderFriends.length + 1)
                       ) {
-                        console.log(`${count} update 후 res 보냄`);
+                        // console.log(`${count} update 후 res 보냄`);
                         res.json({
                           url: resImages,
                           img_cnt: images.length,
@@ -142,9 +144,11 @@ async function uploadImage(req, res, next) {
                     });
                   } else {
                     count++;
-                    console.log(`${count} 친구X`);
+                    console.log(
+                      `| ${uploader.nickname} | ${count} | ${imageIdx} | ${friendIdx} | 친구X`
+                    );
                     if (count == images.length * (uploaderFriends.length + 1)) {
-                      console.log(`${count} 친구X res 보냄`);
+                      // console.log(`${count} 친구X res 보냄`);
                       res.json({
                         url: resImages,
                         img_cnt: images.length,
@@ -157,9 +161,11 @@ async function uploadImage(req, res, next) {
             );
           } else {
             count++;
-            console.log(`${count} 얼굴X`);
+            console.log(
+              `| ${uploader.nickname} | ${count} | ${imageIdx} | ${friendIdx} | 얼굴X`
+            );
             if (count == images.length * (uploaderFriends.length + 1)) {
-              console.log(`${count} 얼굴X res 보냄`);
+              // console.log(`${count} 얼굴X res 보냄`);
               res.json({
                 url: resImages,
                 img_cnt: images.length,
@@ -171,6 +177,14 @@ async function uploadImage(req, res, next) {
       }
     });
   }
+  /**rekog 제외 test */
+  // res.json({
+  //   url: resImages,
+  //   img_cnt: images.length,
+  //   friends: friendsInImage,
+  // });
+  /**rekog 제외 test */
+  console.log(`=====================================`);
 }
 
 module.exports = { uploadImage };

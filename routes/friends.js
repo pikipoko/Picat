@@ -6,20 +6,26 @@ const pushAlarm = require("./pushAlarm");
 // 친구 한 명이 초대를 수락했을 때, 그 친구를 수락한 방으로 이동시키는 작업.
 const inviteFriends = async function (req, res, next) {
   const userInfo = req.body;
+  const id = parseInt(userInfo.id);
+  const roomIdx = parseInt(userInfo.roomIdx);
+  console.log(`==================id - ${id} | roomIdx - ${roomIdx}`);
   /* req.body
    * id - 초대받은 사람
    * roomIdx - 초대 수락 후 이동할 방
    */
 
   // 기존 방 나감.
-  await checkOutTheRoom(userInfo.id);
+  await checkOutTheRoom(id);
 
   // 초대 받은 방으로 이동
   // 갈 방에 초대받은 사람 추가
-  const roomToGo = await findOne({ roomIdx: userInfo.roomIdx }).exec();
-  roomToGo.members.push(userInfo.id);
-  await updateOne(
-    { roomIdx: userInfo.roomIdx },
+  const roomToGo = await Room.findOne({ roomIdx: roomIdx }).exec();
+  roomToGo.members.push(id);
+  console.log(
+    `업데이트 된 갈 방[${roomToGo.roomIdx}] 멤버 - ${roomToGo.members}`
+  );
+  await Room.updateOne(
+    { roomIdx: roomIdx },
     {
       $set: {
         members: roomToGo.members,
@@ -29,8 +35,8 @@ const inviteFriends = async function (req, res, next) {
   )
     .then(async () => {
       // 초대받은 사람의 roomIdx 정보 업데이트.
-      await updateOne(
-        { id: userInfo.id },
+      await User.updateOne(
+        { id: id },
         {
           $set: {
             roomIdx: roomToGo.roomIdx,
@@ -68,6 +74,9 @@ const sendPushAlarm = async function (req, res, next) {
   }
 
   const host = await User.findOne({ id: req.body.id }).exec();
+  console.log(
+    `| sendPushAlarm | id - ${host.id} | roomIdx - ${host.roomIdx} | ${host.nickname} |`
+  );
   if (host) {
     for (let i = 0; i < friendsReq.length; i++) {
       preFriend = parseInt(friendsReq[i]);

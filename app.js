@@ -89,17 +89,19 @@ io.sockets.on("connection", (socket) => {
       const room = await Room.findOne({
         members: { $in: [memberData.id] },
       }).exec();
-      let emitMembers = {};
-      await User.find(
-        { id: { $in: room.members } },
-        { _id: 0, id: 1, nickname: 1, picture: 1 },
-        function (err, docs) {
-          emitMembers = {
-            friends_list: docs,
-          };
-          io.to(room.roomIdx).emit("participate", emitMembers);
-        }
-      ).clone();
+      if (room) {
+        let emitMembers = {};
+        await User.find(
+          { id: { $in: room.members } },
+          { _id: 0, id: 1, nickname: 1, picture: 1 },
+          function (err, docs) {
+            emitMembers = {
+              friends_list: docs,
+            };
+            io.to(room.roomIdx).emit("participate", emitMembers);
+          }
+        ).clone();
+      }
     }
   });
 
@@ -107,7 +109,7 @@ io.sockets.on("connection", (socket) => {
   socket.on("image", async (data) => {
     const user = await User.findOne({ id: data.id }).exec();
     console.log(
-      `| image | 보낸사람: ${user.nickname}, 업로드 수:${data.img_cnt} |`
+      `| image | 보낸사람: ${user.nickname}, 업로드 수: ${data.img_cnt} |`
     );
     const roomIdx = user.roomIdx;
     io.to(roomIdx).emit("image", data);

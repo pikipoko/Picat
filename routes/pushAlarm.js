@@ -24,10 +24,10 @@ function pushAlarm(deviceId, jsonTitle, jsonBody, host) {
     },
     json: {
       to: deviceId,
-      notification: {
-        title: jsonTitle,
-        body: jsonBody,
-      },
+      // notification: {
+      //   title: jsonTitle,
+      //   body: jsonBody,
+      // },
       data: {
         id: host.id,
         roomIdx: host.roomIdx,
