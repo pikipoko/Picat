@@ -2,18 +2,19 @@ require("dotenv");
 const User = require("../models/User");
 const Img = require("../models/Image");
 const Room = require("../models/Room");
-// const compareFaces = require("../config/compareFaces");
-////
 const AWS = require("aws-sdk");
 const rekognition = new AWS.Rekognition({ region: "ap-northeast-2" });
+const {isBlur} = require("./isBlur")
+
 
 async function uploadImage(req, res, next) {
   let count = 0;
-  let resImages = [];
+  const resImages = [];
+  const blurImages = [];
 
   const images = req.files;
   const uploaderId = parseInt(req.body.id);
-  let friendsInImage = [];
+  const friendsInImage = [];
 
   const uploader = await User.findOne({ id: uploaderId });
   const uploaderFriends = uploader.elements;
@@ -23,7 +24,6 @@ async function uploadImage(req, res, next) {
 
   for (let imageIdx = 0; imageIdx < images.length; imageIdx++) {
     let preImage = images[imageIdx].location;
-    resImages[imageIdx] = preImage;
     let usersInImage = [];
 
     // 사진도 유저와 같은 방에 있어야 함.
@@ -32,6 +32,14 @@ async function uploadImage(req, res, next) {
     newImg.id = uploaderId;
     newImg.url = preImage;
     newImg.users = usersInImage;
+    newImg.isBlur = false;
+    const isB = await isBlur(preImage)
+    if(isB){
+      blurImages.push(preImage);
+      newImg.isBlur = true;
+    } else{
+      resImages.push(preImage);
+    }
     await newImg.save().then(() => {
       console.log(`| ${uploader.nickname} | ${count} DB 저장 완료`);
       count++;
@@ -42,9 +50,11 @@ async function uploadImage(req, res, next) {
           url: resImages,
           img_cnt: images.length,
           friends: friendsInImage,
+          blurImages: blurImages
         });
       }
     });
+
     const targetImgName = preImage.split("/")[3];
     let detectParams = {
       Image: {
@@ -54,6 +64,7 @@ async function uploadImage(req, res, next) {
         },
       },
     };
+
 
     rekognition.detectFaces(detectParams, async function (err, response) {
       if (err) {
@@ -139,6 +150,7 @@ async function uploadImage(req, res, next) {
                           url: resImages,
                           img_cnt: images.length,
                           friends: friendsInImage,
+                          blurImages: blurImages
                         });
                       }
                     });
@@ -153,6 +165,7 @@ async function uploadImage(req, res, next) {
                         url: resImages,
                         img_cnt: images.length,
                         friends: friendsInImage,
+                        blurImages: blurImages
                       });
                     }
                   }
@@ -170,12 +183,14 @@ async function uploadImage(req, res, next) {
                 url: resImages,
                 img_cnt: images.length,
                 friends: friendsInImage,
+                blurImages: blurImages
               });
             }
           }
         }
       }
     });
+
   }
   /**rekog 제외 test */
   // res.json({
