@@ -20,6 +20,7 @@ const { login } = require("./routes/login");
 const { inviteFriends, sendPushAlarm } = require("./routes/friends");
 const { uploadImage } = require("./routes/uploadImage");
 const { filter } = require("./routes/filter");
+const { blur, clear } = require("./routes/blur");
 
 const { allowCrossDomain } = require("./config/allowCrossDomain");
 const { checkOutTheRoom, checkInTheRoom } = require("./config/checkInOut");
@@ -33,6 +34,8 @@ app.use(allowCrossDomain);
 app.post("/image", upload.array("image"), uploadImage); /**이미지 업로드 */
 app.post("/app/users/kakao", login); /**카카오톡을 통한 로그인 */
 app.get("/filter", filter); /**필터 요청 */
+app.get("/blur", blur); /**흐린사진 요청 */
+app.get("/clear", clear); /**선명한 사진 요청 */
 app.post("/friends", sendPushAlarm); /**초대 알람 푸시 알람 전송*/
 app.post("/accept", inviteFriends); /**초대 수락 */
 
@@ -60,6 +63,7 @@ io.sockets.on("connection", (socket) => {
       const emit_data = {
         img_list: imagesInRoom,
         img_cnt: imagesInRoom.length,
+        // blur_list: blurs,
       };
 
       /**공유방 이미지 목록 클라이언트에게 전달 */
@@ -109,7 +113,9 @@ io.sockets.on("connection", (socket) => {
   socket.on("image", async (data) => {
     const user = await User.findOne({ id: data.id }).exec();
     console.log(
-      `| image | 보낸사람: ${user.nickname}, 업로드 수: ${data.img_cnt} |`
+      `| image | 보낸사람: ${user.nickname}, 업로드 수: ${
+        data.img_cnt
+      }, 시간:${new Date()} |`
     );
     const roomIdx = user.roomIdx;
     io.to(roomIdx).emit("image", data);
