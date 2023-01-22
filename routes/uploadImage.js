@@ -1,16 +1,15 @@
 require("dotenv");
+const request = require("request");
 const User = require("../models/User");
 const Img = require("../models/Image");
 const Room = require("../models/Room");
 const AWS = require("aws-sdk");
 const rekognition = new AWS.Rekognition({ region: "ap-northeast-2" });
-const {isBlur} = require("./isBlur")
-
 
 async function uploadImage(req, res, next) {
   let count = 0;
   const resImages = [];
-  const blurImages = [];
+  // const blurImages = [];
 
   const images = req.files;
   const uploaderId = parseInt(req.body.id);
@@ -22,38 +21,53 @@ async function uploadImage(req, res, next) {
   const room = await Room.findOne({ roomIdx: uploader.roomIdx });
   const roomMembers = room.members;
 
+  /*********Blur 서버 요청 */
+  /*DB에 images 먼저 저장*/
   for (let imageIdx = 0; imageIdx < images.length; imageIdx++) {
     let preImage = images[imageIdx].location;
-    let usersInImage = [];
-
-    // 사진도 유저와 같은 방에 있어야 함.
     const newImg = new Img();
     newImg.roomIdx = uploader.roomIdx;
     newImg.id = uploaderId;
     newImg.url = preImage;
-    newImg.users = usersInImage;
+    newImg.users = [];
     newImg.isBlur = false;
-    const isB = await isBlur(preImage)
-    if(isB){
-      blurImages.push(preImage);
-      newImg.isBlur = true;
-    } else{
-      resImages.push(preImage);
-    }
     await newImg.save().then(() => {
       console.log(`| ${uploader.nickname} | ${count} DB 저장 완료`);
       count++;
-      if (count == images.length * (uploaderFriends.length + 1)) {
-        // if (count == images.length) {
-        // console.log(`${count} 처음 save res 보냄`);
-        res.json({
-          url: resImages,
-          img_cnt: images.length,
-          friends: friendsInImage,
-          blurImages: blurImages
-        });
-      }
     });
+  }
+  /*Blur 서버에 images 전달*/
+  request.post(
+    {
+      url: "http://3.39.184.45:5000/process-request",
+      json: { imageURL: images, roomIdx: uploader.roomIdx },
+    },
+    (error, response, body) => {
+      if (!error && response.statusCode === 200) {
+        // Print the response from the second server
+        console.log(body);
+        res.send(body);
+      }
+    }
+  );
+
+  for (let imageIdx = 0; imageIdx < images.length; imageIdx++) {
+    let preImage = images[imageIdx].location;
+    resImages[imageIdx] = preImage;
+    let usersInImage = [];
+    // resImages.push(preImage);
+
+    // 사진도 유저와 같은 방에 있어야 함.
+    // const newImg = new Img();
+    // newImg.roomIdx = uploader.roomIdx;
+    // newImg.id = uploaderId;
+    // newImg.url = preImage;
+    // newImg.users = usersInImage;
+    // newImg.isBlur = false;
+    // await newImg.save().then(() => {
+    //   console.log(`| ${uploader.nickname} | ${count} DB 저장 완료`);
+    //   count++;
+    // });
 
     const targetImgName = preImage.split("/")[3];
     let detectParams = {
@@ -64,7 +78,6 @@ async function uploadImage(req, res, next) {
         },
       },
     };
-
 
     rekognition.detectFaces(detectParams, async function (err, response) {
       if (err) {
@@ -125,7 +138,7 @@ async function uploadImage(req, res, next) {
                         }
                       }
 
-                      newImg.users = usersInImage;
+                      // newImg.users = usersInImage;
                     });
                     await Img.updateOne(
                       {
@@ -150,7 +163,7 @@ async function uploadImage(req, res, next) {
                           url: resImages,
                           img_cnt: images.length,
                           friends: friendsInImage,
-                          blurImages: blurImages
+                          // blurImages: blurImages,
                         });
                       }
                     });
@@ -165,7 +178,7 @@ async function uploadImage(req, res, next) {
                         url: resImages,
                         img_cnt: images.length,
                         friends: friendsInImage,
-                        blurImages: blurImages
+                        // blurImages: blurImages,
                       });
                     }
                   }
@@ -183,14 +196,13 @@ async function uploadImage(req, res, next) {
                 url: resImages,
                 img_cnt: images.length,
                 friends: friendsInImage,
-                blurImages: blurImages
+                // blurImages: blurImages,
               });
             }
           }
         }
       }
     });
-
   }
   /**rekog 제외 test */
   // res.json({
