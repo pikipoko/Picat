@@ -69,7 +69,7 @@ io.sockets.on("connection", (socket) => {
       /**공유방 이미지 목록 클라이언트에게 전달 */
       io.to(socket.id).emit("join", emit_data);
       console.log(
-        `| ${user.nickname} | friendList : [${friendList}] | joined - room:${roomIdx} | 기존 사진 전송 - ${emit_data.img_cnt}개 |`
+        `| ${user.id} | friendList : [${friendList}] | joined - room:${roomIdx} | 기존 사진 전송 - ${emit_data.img_cnt}개 |`
       );
 
       /**join할 때 친구목록 업데이트 */
@@ -81,7 +81,7 @@ io.sockets.on("connection", (socket) => {
           },
         }
       ).then(() => {
-        console.log(`| ${user.nickname} | 친구목록 업데이트 완료 |`);
+        console.log(`| ${user.id} | 친구목록 업데이트 완료 |`);
       });
     }
   });
@@ -90,6 +90,18 @@ io.sockets.on("connection", (socket) => {
   socket.on("participate", async (memberData) => {
     console.log(`\n| participate |`);
     if (memberData) {
+      /**join할 때 프사 업데이트 */
+      await User.updateOne(
+        { id: memberData.id },
+        {
+          $set: {
+            picture: memberData.picture,
+          },
+        }
+      ).then(() => {
+        console.log(`| ${memberData.id} |프로필 업데이트 완료 |`);
+      });
+
       const room = await Room.findOne({
         members: { $in: [memberData.id] },
       }).exec();
@@ -113,7 +125,7 @@ io.sockets.on("connection", (socket) => {
   socket.on("image", async (data) => {
     const user = await User.findOne({ id: data.id }).exec();
     console.log(
-      `| image | 보낸사람: ${user.nickname}, 업로드 수: ${
+      `| image | 보낸사람: ${user.id}, 업로드 수: ${
         data.img_cnt
       }, 시간:${new Date()} |`
     );
@@ -129,7 +141,7 @@ io.sockets.on("connection", (socket) => {
     await checkOutTheRoom(id);
     await checkInTheRoom(id);
 
-    console.log(`| exit | ${user.nickname}님이 방을 나갔습니다.`);
+    console.log(`| exit | ${user.id}님이 방을 나갔습니다.`);
     io.to(originalRoom.roomIdx).emit("exit", id);
   });
 
