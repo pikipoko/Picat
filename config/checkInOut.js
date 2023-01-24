@@ -25,7 +25,7 @@ async function checkOutTheRoom(input_id) {
     }
   )
     .then(() => {
-      console.log(`${user.nickname}님 - 기존 방 checkout 완료`);
+      console.log(`| ${user.id}님 | 기존 방 checkout 완료 |`);
     })
     .catch((err) => {
       console.log(`기존 방 나가는 도중 에러 발생 : ${err}`);
@@ -75,7 +75,7 @@ async function checkInTheRoom(id) {
         },
       }
     ).then(() => {
-      console.log(`${user.nickname}님 ${emptyRoom.roomIdx}번 방으로 이동 완료`);
+      console.log(`${user.id}님 ${emptyRoom.roomIdx}번 방으로 이동 완료`);
     });
   } else {
     // 빈 방이 없는 경우 -> 새 방 생성
@@ -90,7 +90,7 @@ async function checkInTheRoom(id) {
     newRoom.roomMemberCnt = updateMembers.length;
     newRoom.members = updateMembers;
     await newRoom.save().then(() => {
-      console.log(`| ${user.nickname} | 빈 방X -> 새 방[${newRoomIdx}] 할당`);
+      console.log(`| ${user.id} | 빈 방X -> 새 방[${newRoomIdx}] 할당`);
     });
 
     await User.updateOne(
@@ -103,7 +103,7 @@ async function checkInTheRoom(id) {
         },
       }
     ).then(() => {
-      console.log(`${user.nickname}님 ${newRoomIdx}번 방으로 이동 완료`);
+      console.log(`${user.id}님 ${newRoomIdx}번 방으로 이동 완료`);
     });
   }
 }

@@ -21,7 +21,7 @@ const uploadImageToS3 = async (imageUrl, fileName) => {
         .pipe(fs.createWriteStream(`config/users/${fileName}.jpg`))
         .on("finish", (data) => {
           const param = {
-            Bucket: "picat-3rd",
+            Bucket: process.env.PICAT,
             Key: `users/${fileName}.jpg`, // s3 bucket 에다가 다운.
             // ACL: "public-read",
             Body: fs.createReadStream(`config/users/${fileName}.jpg`), // 우리 서버에다가 다운
@@ -44,10 +44,8 @@ const login = async function (req, res, next) {
 
   /**친구 id 저장 */
   const elements = userInfo.elements.map((obj) => obj.id);
-  const friendList = userInfo.elements.map((obj) => obj.profile_nickname);
 
-  console.log(`카카오 친구목록 - 총${friendList.length}명 [${friendList}]`);
-  console.log(`(elements) - 총${elements.length}명 [${elements}]`);
+  console.log(`친구목록 - 총${elements.length}명 [${elements}]`);
 
   uploadImageToS3(userInfo.picture, userInfo.id);
 

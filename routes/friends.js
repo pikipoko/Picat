@@ -3,59 +3,100 @@ const Room = require("../models/Room");
 const { checkOutTheRoom, checkInTheRoom } = require("../config/checkInOut");
 const pushAlarm = require("./pushAlarm");
 
-let inviteFriends = async function (req, res, next) {
-  let isSuccess = true;
+// 친구 한 명이 초대를 수락했을 때, 그 친구를 수락한 방으로 이동시키는 작업.
+const inviteFriends = async function (req, res, next) {
+  const userInfo = req.body;
+  const id = parseInt(userInfo.id);
+  const roomIdx = parseInt(userInfo.roomIdx);
+  console.log(`==================id - ${id} | roomIdx - ${roomIdx}`);
+  /* req.body
+   * id - 초대받은 사람
+   * roomIdx - 초대 수락 후 이동할 방
+   */
+
+  // 기존 방 나감.
+  await checkOutTheRoom(id);
+
+  // 초대 받은 방으로 이동
+  // 갈 방에 초대받은 사람 추가
+  const roomToGo = await Room.findOne({ roomIdx: roomIdx }).exec();
+  roomToGo.members.push(id);
+  console.log(
+    `업데이트 된 갈 방[${roomToGo.roomIdx}] 멤버 - ${roomToGo.members}`
+  );
+  await Room.updateOne(
+    { roomIdx: roomIdx },
+    {
+      $set: {
+        members: roomToGo.members,
+        roomMemberCnt: roomToGo.members.length,
+      },
+    }
+  )
+    .then(async () => {
+      // 초대받은 사람의 roomIdx 정보 업데이트.
+      await User.updateOne(
+        { id: id },
+        {
+          $set: {
+            roomIdx: roomToGo.roomIdx,
+          },
+        }
+      )
+        .then(() => {
+          console.log(`| 초대 받은 친구 및 방 정보 업데이트 완료 |`);
+          res.json({
+            isSuccess: true,
+          });
+        })
+        .catch((err) => {
+          console.log(
+            `| 초대 받은 친구 및 방 정보 업데이트 중 에러 발생 | ${err}`
+          );
+          res.json({
+            isSuccess: false,
+          });
+        });
+    })
+    .catch((err) => {
+      console.log(`| 초대 받은 친구 및 방 정보 업데이트 중 에러 발생 | ${err}`);
+      res.json({
+        isSuccess: false,
+      });
+    });
+};
+
+const sendPushAlarm = async function (req, res, next) {
   let friendsReq = req.body.friends;
-  console.log(`request 받은 친구 목록 : ${friendsReq} ${typeof friendsReq}`);
   if (typeof friendsReq == typeof "typeString") {
-    console.log(`string을 [ 숫자 ]로 바꿔줌`);
+    // 친구 한명만 요청될 경우 string으로 값이 들어옴. -> 숫자형 배열로 수정.
     friendsReq = [parseInt(req.body.friends)];
   }
 
   const host = await User.findOne({ id: req.body.id }).exec();
+  console.log(
+    `| sendPushAlarm | id - ${host.id} | roomIdx - ${host.roomIdx} |`
+  );
   if (host) {
-    const hostRoom = await Room.findOne({ roomIdx: host.roomIdx });
-    const newMembers = hostRoom.members;
-
     for (let i = 0; i < friendsReq.length; i++) {
       preFriend = parseInt(friendsReq[i]);
-
-      await checkOutTheRoom(preFriend);
-      await User.findOneAndUpdate(
-        { id: preFriend },
-        { $set: { roomIdx: hostRoom.roomIdx } }
-      ).then(() => {
-        console.log(`${preFriend} 유저 업데이트 완료, 푸시알람 시작`);
-        if (!newMembers.includes(preFriend)) {
-          newMembers.push(preFriend);
-        }
-        pushAlarm(
-          preFriend.my_device_id,
-          `${preFriend.nickname}에게 보내는 푸시알람`,
-          `${host.nickname}님이 ${host.roomIdx} 방으로 초대`
-        );
-      });
+      const preUser = await User.findOne({ id: preFriend });
+      pushAlarm(
+        preUser.my_device_id,
+        `Picat 초대 알림`,
+        `${host.id}님이 초대하였습니다.`,
+        host
+      );
     }
-    // 호스트 방 업데이트
-    await Room.updateOne(
-      { roomIdx: host.roomIdx },
-      {
-        $set: {
-          members: newMembers,
-          roomMemberCnt: newMembers.length,
-        },
-      }
-    );
 
     res.json({
-      isSuccess: isSuccess,
+      isSuccess: true,
     });
   } else {
-    isSuccess = false;
     res.json({
-      isSuccess: isSuccess,
+      isSuccess: false,
     });
   }
 };
 
-module.exports = { inviteFriends };
+module.exports = { inviteFriends, sendPushAlarm };

@@ -6,6 +6,7 @@ const imgSchema = new Schema({
   roomIdx: Number,
   id: Number,
   url: String,
+  isBlur: Boolean,
   users: {
     type: Array,
     required: true,
