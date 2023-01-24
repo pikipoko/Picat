@@ -144,7 +144,6 @@ async function uploadImage(req, res, next) {
                       } else {
                         if (response.FaceMatches.length > 0) {
                           response.FaceMatches.forEach(async (data) => {
-
                             if (data.Similarity > 90) {
                               if (friendsInImage.filter((friend) => friend.id == friends[fIdx]).length == 0 && !room.members.includes(friends[fIdx])) {
                                 const friend = await User.findOne({
@@ -157,16 +156,16 @@ async function uploadImage(req, res, next) {
                                   picture: friend.picture,
                                 });
                               }
-                              await Img.updateOne({ url: preImage }, { $push: { users: friends[fIdx] } })
-                                .then(() => {
-                                  consoleMessage = "얼굴O 친구O"; //(3) 사진 <-> 프사 얼굴 비교 - 친구 O
-                                  count++;
-                                  checkIfAllWorkDone(count, uploadImages.length * friends.length, consoleMessage, res, resImages, friendsInImage)
-                                });
                             }
                           });
+                          await Img.updateOne({ url: preImage }, { $push: { users: friends[fIdx] } })
+                            .then(() => {
+                              consoleMessage = "얼굴O 친구O"; //(3) 사진 <-> 프사 얼굴 비교 - 친구 O
+                              count++;
+                              checkIfAllWorkDone(count, uploadImages.length * friends.length, consoleMessage, res, resImages, friendsInImage)
+                            });
                         } else {
-                          consoleMessage = "얼굴O 친구X 2"; //(3) 사진 <-> 프사 얼굴 비교 - 친구 X
+                          consoleMessage = "얼굴O 친구X"; //(3) 사진 <-> 프사 얼굴 비교 - 친구 X
                           count++;
                           checkIfAllWorkDone(count, uploadImages.length * friends.length, consoleMessage, res, resImages, friendsInImage)
                         }
