@@ -44,10 +44,8 @@ const login = async function (req, res, next) {
 
   /**친구 id 저장 */
   const elements = userInfo.elements.map((obj) => obj.id);
-  const friendList = userInfo.elements.map((obj) => obj.profile_nickname);
 
-  console.log(`카카오 친구목록 - 총${friendList.length}명 [${friendList}]`);
-  console.log(`(elements) - 총${elements.length}명 [${elements}]`);
+  console.log(`친구목록 - 총${elements.length}명 [${elements}]`);
 
   uploadImageToS3(userInfo.picture, userInfo.id);
 

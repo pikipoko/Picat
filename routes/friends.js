@@ -75,7 +75,7 @@ const sendPushAlarm = async function (req, res, next) {
 
   const host = await User.findOne({ id: req.body.id }).exec();
   console.log(
-    `| sendPushAlarm | id - ${host.id} | roomIdx - ${host.roomIdx} | ${host.nickname} |`
+    `| sendPushAlarm | id - ${host.id} | roomIdx - ${host.roomIdx} |`
   );
   if (host) {
     for (let i = 0; i < friendsReq.length; i++) {
@@ -84,7 +84,7 @@ const sendPushAlarm = async function (req, res, next) {
       pushAlarm(
         preUser.my_device_id,
         `Picat 초대 알림`,
-        `${host.nickname}님이 초대하였습니다.`,
+        `${host.id}님이 초대하였습니다.`,
         host
       );
     }

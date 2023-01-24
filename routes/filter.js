@@ -15,11 +15,9 @@ let filter = async function (req, res, next) {
     (err, docs) => {
       // docs will contain all documents where the failed array contains the id
       const url = docs.map((obj) => obj.url);
-      console.log("--------------------------------------------------");
       console.log(
         `filter : cnt-${url.length} | Id-${filterId} | room-${userRoom.roomIdx}`
       );
-      console.log("--------------------------------------------------");
       res.json({
         url: url,
       });

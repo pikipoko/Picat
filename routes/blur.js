@@ -12,11 +12,9 @@ let blur = async function (req, res, next) {
     (err, docs) => {
       // docs will contain all documents where the failed array contains the id
       const url = docs.map((obj) => obj.url);
-      console.log("--------------------------------------------------");
       console.log(
         `blur : blur_cnt-${url.length} | bluer 요청 Id-${blurId} | room-${userRoom.roomIdx}`
       );
-      console.log("--------------------------------------------------");
       res.json({
         url: url,
       });
@@ -34,11 +32,9 @@ let clear = async function (req, res, next) {
     (err, docs) => {
       // docs will contain all documents where the failed array contains the id
       const url = docs.map((obj) => obj.url);
-      console.log("--------------------------------------------------");
       console.log(
         `clear : clear_cnt-${url.length} | clear 요청 Id-${blurId} | room-${userRoom.roomIdx}`
       );
-      console.log("--------------------------------------------------");
       res.json({
         url: url,
       });
