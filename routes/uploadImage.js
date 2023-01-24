@@ -6,6 +6,7 @@ const Room = require("../models/Room");
 const AWS = require("aws-sdk");
 const rekognition = new AWS.Rekognition({ region: "ap-northeast-2" });
 
+/**DB에 이미지 저장 */
 async function saveImagesInDB(images, uploader) {
   for (let i = 0; i < images.length; i++) {
     let preImage = images[i].location;
@@ -15,12 +16,12 @@ async function saveImagesInDB(images, uploader) {
     newImg.url = preImage;
     newImg.users = [];
     newImg.isBlur = false;
-    await newImg.save().then(() => {
-      console.log(`| ${i} DB 저장 완료 |${uploader.id}|`)
-    })
+    await newImg.save()
   }
+  console.log(`| ${images.length}장 DB 저장 완료 | ${uploader.id} |`)
 }
 
+/**서브 서버에 Blur Check 요청 */
 function requestBlurCheck(images) {
   request.post({
     url: "http://3.39.184.45:5000/checkBlur",
@@ -35,6 +36,7 @@ function requestBlurCheck(images) {
     })
 }
 
+/**set S3 detect_face Param */
 function setDetectParam(imageName) {
   return {
     Image: {
@@ -46,6 +48,7 @@ function setDetectParam(imageName) {
   }
 }
 
+/**set S3 compare_faces Param */
 function setCompareParam(sourceImageName, targetImageName) {
   return {
     SourceImage: {
@@ -64,12 +67,14 @@ function setCompareParam(sourceImageName, targetImageName) {
   }
 }
 
-function checkIfAllWorkDone(count, imagesLength, friendsLength, printMessage, res, imagesURL, friendsInImage) {
-  console.log(`| ${printMessage} |${count}|`);
-  if (count == imagesLength * friendsLength) {
+/**check all work done and write console */
+function checkIfAllWorkDone(count, works, Message, res, imagesURL, friendsInImage) {
+  console.log(`| ${count}/${works} | ${Message} |`);
+  if (count == works) {
+    console.log(`| ${count} 작업 완료 | ${Message} |`)
     res.json({
       url: imagesURL,
-      img_cnt: imagesLength,
+      img_cnt: imagesURL.length,
       friends: friendsInImage
     })
   }
@@ -77,19 +82,18 @@ function checkIfAllWorkDone(count, imagesLength, friendsLength, printMessage, re
 
 async function uploadImage(req, res, next) {
   let count = 0;
-  let consoleMessage = "upload시작";
   const resImages = [];
   const friendsInImage = [];
 
   const uploadImages = req.files;
   const uploaderId = parseInt(req.body.id);
+  let consoleMessage = `${uploaderId}`;
 
   const uploader = await User.findOne({ id: uploaderId });
   const friends = uploader.elements;
   friends.push(uploaderId);
 
   const room = await Room.findOne({ roomIdx: uploader.roomIdx });
-  const roomMembers = room.members;
 
   /*DB에 images 먼저 저장*/
   await saveImagesInDB(uploadImages, uploader);
@@ -139,10 +143,10 @@ async function uploadImage(req, res, next) {
                         console.log(err);
                       } else {
                         if (response.FaceMatches.length > 0) {
-                          //(3) 사진 <-> 프사 얼굴 비교 - 친구 O
                           response.FaceMatches.forEach(async (data) => {
+
                             if (data.Similarity > 90) {
-                              if (friendsInImage.filter((friend) => friend.id == friends[fIdx]).length == 0 && !roomMembers.includes(friends[fIdx])) {
+                              if (friendsInImage.filter((friend) => friend.id == friends[fIdx]).length == 0 && !room.members.includes(friends[fIdx])) {
                                 const friend = await User.findOne({
                                   id: friends[fIdx],
                                 }).exec();
@@ -152,39 +156,35 @@ async function uploadImage(req, res, next) {
                                   id: friend.id,
                                   picture: friend.picture,
                                 });
-
-                                await Img.updateOne({ url: preImage }, { $push: { users: friends[fIdx] } })
-                                  .then(() => {
-                                    consoleMessage = "얼굴O 친구O DB 업데이트 완료";
-                                    count++;
-                                    checkIfAllWorkDone(count, uploadImages.length, friends.length, consoleMessage, res, resImages, friendsInImage)
-                                  });
                               }
+                              await Img.updateOne({ url: preImage }, { $push: { users: friends[fIdx] } })
+                                .then(() => {
+                                  consoleMessage = "얼굴O 친구O"; //(3) 사진 <-> 프사 얼굴 비교 - 친구 O
+                                  count++;
+                                  checkIfAllWorkDone(count, uploadImages.length * friends.length, consoleMessage, res, resImages, friendsInImage)
+                                });
                             }
                           });
                         } else {
-                          //(3) 사진 <-> 프사 얼굴 비교 - 친구 X
-                          consoleMessage = "얼굴O 친구X";
+                          consoleMessage = "얼굴O 친구X 2"; //(3) 사진 <-> 프사 얼굴 비교 - 친구 X
                           count++;
-                          checkIfAllWorkDone(count, uploadImages.length, friends.length, consoleMessage, res, resImages, friendsInImage)
+                          checkIfAllWorkDone(count, uploadImages.length * friends.length, consoleMessage, res, resImages, friendsInImage)
                         }
                       }
                     }
                   );
                 } else {
-                  //(2)프사 내 얼굴 유무-X
-                  consoleMessage = "친구 프사에 얼굴 X";
+                  consoleMessage = "친구 프사에 얼굴X"; //(2)프사 내 얼굴 유무-X
                   count++;
-                  checkIfAllWorkDone(count, uploadImages.length, friends.length, consoleMessage, res, resImages, friendsInImage)
+                  checkIfAllWorkDone(count, uploadImages.length * friends.length, consoleMessage, res, resImages, friendsInImage)
                 }
               }
             });
           }
         } else {
-          //(1)얼굴유무 판단 - X
-          consoleMessage = "업로드 사진에 얼굴 X";
+          consoleMessage = "얼굴X"; //(1)얼굴유무 판단 - X
           count += friends.length;
-          checkIfAllWorkDone(count, uploadImages.length, friends.length, consoleMessage, res, resImages, friendsInImage)
+          checkIfAllWorkDone(count, uploadImages.length * friends.length, consoleMessage, res, resImages, friendsInImage)
         }
       }
     });
