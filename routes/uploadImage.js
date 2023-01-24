@@ -76,7 +76,7 @@ function checkIfAllWorkDone(count, countIncrement, imagesLength, friendsLength, 
   }
 }
 
-async function findFriendsInImage(preImage, friends, friendProfile, targetImgName, friendsInImage, roomMembers, resImages, ImagesLength, res) {
+async function findFriendsInImage(preImage, friends, friendProfile, targetImgName, friendsInImage, roomMembers, resImages, ImagesLength, res, count) {
   //(2)프사 내 얼굴 유무-O
   const compareParams = setCompareParam(friendProfile, targetImgName)
 
@@ -173,7 +173,7 @@ async function uploadImage(req, res, next) {
                 count++;
               } else {
                 if (response.FaceDetails.length > 0) {
-                  await findFriendsInImage(preImage, friends, friendProfile, targetImgName, friendsInImage, roomMembers, resImages, res)
+                  await findFriendsInImage(preImage, friends, friendProfile, targetImgName, friendsInImage, roomMembers, resImages, res, count)
                 } else {
                   //(2)프사 내 얼굴 유무-X
                   consoleMessage = "친구 프사에 얼굴 X";
