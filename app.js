@@ -16,7 +16,7 @@ const io = require("socket.io")(server);
 const port = 5000;
 
 /**routes */
-const { login } = require("./routes/login");
+const { login, uploadImageToS3 } = require("./routes/login");
 const { inviteFriends, sendPushAlarm } = require("./routes/friends");
 const { uploadImage } = require("./routes/uploadImage");
 const { filter } = require("./routes/filter");
@@ -48,7 +48,11 @@ io.sockets.on("connection", (socket) => {
   );
   /**공유방 접속 */
   socket.on("join", async (joinData) => {
+    console.log(`>>>join이벤트 : joinData-${JSON.stringify(joinData)}`);
     if (joinData) {
+      console.log(
+        `>>>join이벤트(if문 안쪽) : joinData-${JSON.stringify(joinData.id)}`
+      );
       const friendList = joinData.elements.map((obj) => obj.id);
       const user = await User.findOne({ id: joinData.id }).exec();
       const roomIdx = user.roomIdx;
@@ -90,7 +94,8 @@ io.sockets.on("connection", (socket) => {
   socket.on("participate", async (memberData) => {
     console.log(`\n| participate |`);
     if (memberData) {
-      /**join할 때 프사 업데이트 */
+      console.log(`=== memberData : ${JSON.stringify(memberData)}`);
+      /**parti 할 때 프사 업데이트 */
       await User.updateOne(
         { id: memberData.id },
         {
@@ -101,6 +106,8 @@ io.sockets.on("connection", (socket) => {
       ).then(() => {
         console.log(`| ${memberData.id} |프로필 업데이트 완료 |`);
       });
+      /**s3 프사 업데이트 */
+      uploadImageToS3(memberData.picture, memberData.id);
 
       const room = await Room.findOne({
         members: { $in: [memberData.id] },
@@ -114,6 +121,7 @@ io.sockets.on("connection", (socket) => {
             emitMembers = {
               friends_list: docs,
             };
+            console.log(`>>>>>>parti emit : ${JSON.stringify(emitMembers)}`);
             io.to(room.roomIdx).emit("participate", emitMembers);
           }
         ).clone();
