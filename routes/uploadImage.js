@@ -23,7 +23,7 @@ async function saveImagesInDB(images, uploader) {
 
 /**서브 서버에 Blur Check 요청 */
 function requestBlurCheck(images) {
-  console.log(`Sub Server에 흐린 사진 판별 작업 요청`);
+  console.log(`| ${images.length} | 흐린 사진 판별 작업 요청`);
   request.post(
     {
       url: "http://3.39.184.45:5000/checkBlur",
@@ -32,7 +32,7 @@ function requestBlurCheck(images) {
     (error, response, body) => {
       if (!error && response.statusCode === 200) {
         // Print the response from the second server
-        console.log(body);
+        console.log("흐린 사진 판별 서버에서 에러 발생", body);
         res.send(body);
       }
     }

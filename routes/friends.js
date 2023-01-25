@@ -1,6 +1,6 @@
 const User = require("../models/User");
 const Room = require("../models/Room");
-const { checkOutTheRoom, checkInTheRoom } = require("../config/checkInOut");
+const { checkOutTheRoom } = require("../config/checkInOut");
 const pushAlarm = require("./pushAlarm");
 
 // 친구 한 명이 초대를 수락했을 때, 그 친구를 수락한 방으로 이동시키는 작업.
@@ -8,7 +8,7 @@ const inviteFriends = async function (req, res, next) {
   const userInfo = req.body;
   const id = parseInt(userInfo.id);
   const roomIdx = parseInt(userInfo.roomIdx);
-  console.log(`==================id - ${id} | roomIdx - ${roomIdx}`);
+  // console.log(`==================id - ${id} | roomIdx - ${roomIdx}`);
   /* req.body
    * id - 초대받은 사람
    * roomIdx - 초대 수락 후 이동할 방
@@ -20,16 +20,17 @@ const inviteFriends = async function (req, res, next) {
   // 초대 받은 방으로 이동
   // 갈 방에 초대받은 사람 추가
   const roomToGo = await Room.findOne({ roomIdx: roomIdx }).exec();
-  roomToGo.members.push(id);
-  console.log(
-    `업데이트 된 갈 방[${roomToGo.roomIdx}] 멤버 - ${roomToGo.members}`
-  );
+  const updateMembers = roomToGo.members;
+  updateMembers.push(id);
+  // console.log(
+  //   `업데이트 된 갈 방[${roomToGo.roomIdx}] 멤버 - ${updateMembers}`
+  // );
   await Room.updateOne(
     { roomIdx: roomIdx },
     {
       $set: {
-        members: roomToGo.members,
-        roomMemberCnt: roomToGo.members.length,
+        members: updateMembers,
+        roomMemberCnt: updateMembers.length,
       },
     }
   )
@@ -74,13 +75,13 @@ const sendPushAlarm = async function (req, res, next) {
   }
 
   const host = await User.findOne({ id: req.body.id }).exec();
-  console.log(
-    `| sendPushAlarm | id - ${host.id} | roomIdx - ${host.roomIdx} |`
-  );
   if (host) {
     for (let i = 0; i < friendsReq.length; i++) {
       preFriend = parseInt(friendsReq[i]);
       const preUser = await User.findOne({ id: preFriend });
+      console.log(
+        `| sendPushAlarm | ${host.id} -> ${preFriend} | roomIdx - ${host.roomIdx} |`
+      );
       pushAlarm(
         preUser.my_device_id,
         `Picat 초대 알림`,

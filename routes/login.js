@@ -3,7 +3,7 @@ const fetch = require("node-fetch");
 const User = require("../models/User");
 const AWS = require("aws-sdk");
 
-const { checkInTheRoom } = require("../config/checkInOut");
+const { checkInNewRoom } = require("../config/checkInOut");
 
 const fs = require("fs");
 const s3 = new AWS.S3({
@@ -96,7 +96,7 @@ const login = async function (req, res, next) {
         isSuccess: false,
       });
     });
-    await checkInTheRoom(userInfo.id).then(() => {
+    await checkInNewRoom(userInfo.id).then(() => {
       res.json({
         message: "새로운 유저 등록 완료",
         isSuccess: true,
