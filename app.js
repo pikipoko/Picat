@@ -16,14 +16,14 @@ const io = require("socket.io")(server);
 const port = 5000;
 
 /**routes */
-const { login } = require("./routes/login");
+const { login, uploadImageToS3 } = require("./routes/login");
 const { inviteFriends, sendPushAlarm } = require("./routes/friends");
 const { uploadImage } = require("./routes/uploadImage");
 const { filter } = require("./routes/filter");
 const { blur, clear } = require("./routes/blur");
 
 const { allowCrossDomain } = require("./config/allowCrossDomain");
-const { checkOutTheRoom, checkInTheRoom } = require("./config/checkInOut");
+const { checkOutTheRoom, checkInNewRoom } = require("./config/checkInOut");
 
 /**공통 미들웨어 장착*/
 app.use(express.json());
@@ -48,7 +48,11 @@ io.sockets.on("connection", (socket) => {
   );
   /**공유방 접속 */
   socket.on("join", async (joinData) => {
+    // console.log(`>>>join이벤트 : joinData-${JSON.stringify(joinData)}`);
     if (joinData) {
+      // console.log(
+      //   `>>>join이벤트(if문 안쪽) : joinData-${JSON.stringify(joinData.id)}`
+      // );
       const friendList = joinData.elements.map((obj) => obj.id);
       const user = await User.findOne({ id: joinData.id }).exec();
       const roomIdx = user.roomIdx;
@@ -63,14 +67,13 @@ io.sockets.on("connection", (socket) => {
       const emit_data = {
         img_list: imagesInRoom,
         img_cnt: imagesInRoom.length,
-        // blur_list: blurs,
       };
 
       /**공유방 이미지 목록 클라이언트에게 전달 */
       io.to(socket.id).emit("join", emit_data);
-      console.log(
-        `| ${user.id} | friendList : [${friendList}] | joined - room:${roomIdx} | 기존 사진 전송 - ${emit_data.img_cnt}개 |`
-      );
+      // console.log(
+      //   `| ${user.id} | friendList : [${friendList}] | joined - room:${roomIdx} | 기존 사진 전송 - ${emit_data.img_cnt}개 |`
+      // );
 
       /**join할 때 친구목록 업데이트 */
       await User.updateOne(
@@ -81,7 +84,7 @@ io.sockets.on("connection", (socket) => {
           },
         }
       ).then(() => {
-        console.log(`| ${user.id} | 친구목록 업데이트 완료 |`);
+        // console.log(`| ${user.id} | 친구목록 업데이트 완료 |`);
       });
     }
   });
@@ -90,7 +93,8 @@ io.sockets.on("connection", (socket) => {
   socket.on("participate", async (memberData) => {
     console.log(`\n| participate |`);
     if (memberData) {
-      /**join할 때 프사 업데이트 */
+      // console.log(`=== memberData : ${JSON.stringify(memberData)}`);
+      /**parti 할 때 프사 업데이트 */
       await User.updateOne(
         { id: memberData.id },
         {
@@ -99,8 +103,10 @@ io.sockets.on("connection", (socket) => {
           },
         }
       ).then(() => {
-        console.log(`| ${memberData.id} |프로필 업데이트 완료 |`);
+        // console.log(`| ${memberData.id} |프로필 업데이트 완료 |`);
       });
+      /**s3 프사 업데이트 */
+      uploadImageToS3(memberData.picture, memberData.id);
 
       const room = await Room.findOne({
         members: { $in: [memberData.id] },
@@ -114,6 +120,7 @@ io.sockets.on("connection", (socket) => {
             emitMembers = {
               friends_list: docs,
             };
+            // console.log(`>>>>>>parti emit : ${JSON.stringify(emitMembers)}`);
             io.to(room.roomIdx).emit("participate", emitMembers);
           }
         ).clone();
@@ -124,11 +131,10 @@ io.sockets.on("connection", (socket) => {
   /**다른 유저들에게 사진 전송 */
   socket.on("image", async (data) => {
     const user = await User.findOne({ id: data.id }).exec();
-    console.log(
-      `| image | 보낸사람: ${user.id}, 업로드 수: ${
-        data.img_cnt
-      }, 시간:${new Date()} |`
-    );
+    // console.log(
+    //   `| image | 보낸사람: ${user.id}, 업로드 수: ${data.img_cnt
+    //   }, 시간:${new Date()} |`
+    // );
     const roomIdx = user.roomIdx;
     io.to(roomIdx).emit("image", data);
   });
@@ -139,7 +145,7 @@ io.sockets.on("connection", (socket) => {
     const originalRoom = await Room.findOne({ roomIdx: user.roomIdx }).exec();
 
     await checkOutTheRoom(id);
-    await checkInTheRoom(id);
+    await checkInNewRoom(id);
 
     console.log(`| exit | ${user.id}님이 방을 나갔습니다.`);
     io.to(originalRoom.roomIdx).emit("exit", id);

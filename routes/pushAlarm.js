@@ -41,8 +41,8 @@ function pushAlarm(deviceId, jsonTitle, jsonBody, host) {
     if (err) {
       console.log(`push alarm err - ${err}`);
     } else {
-      console.log(`httpResponse - ${httpResponse}`);
-      console.log(`body - ${body}`);
+      // console.log(`httpResponse - ${httpResponse}`);
+      // console.log(`body - ${body}`);
     }
   });
 }

@@ -31,20 +31,18 @@ async function checkOutTheRoom(input_id) {
       console.log(`기존 방 나가는 도중 에러 발생 : ${err}`);
     });
 
-  // 유저 정보 업데이트는 안함. checkInTheRoom에서 수행.
+  // 유저 정보 업데이트는 안함. checkInNewRoom에서 수행.
 
-  // 방을 나갈 때 멤버 cnt가 0이면, 방에 있는 이미지들 모두 삭제. 일단 DB에서
-  // S3 삭제하는 방법도 알아내야됨.
+  // 방을 나갈 때 멤버 cnt가 0이면, 방에 있는 이미지들 모두 삭제.
   if (updateMembers.length == 0) {
-    console.log(`방에 남아있는 사람이 없기 때문에 이미지 삭제 시작`);
     await Img.deleteMany({ roomIdx: originalRoom.roomIdx }).then(() => {
-      console.log(`방에 남아있던 이미지 모두 삭제 완료`);
+      console.log(`[${originalRoom.roomIdx}]번 방 이미지 삭제 완료`);
     });
   }
 }
 
-/**새로운 방 찾기 */
-async function checkInTheRoom(id) {
+/**비었거나 새로운 방 찾기 */
+async function checkInNewRoom(id) {
   const user = await User.findOne({ id: id }).exec();
   const emptyRoom = await Room.findOne({ roomMemberCnt: 0 }).exec();
   const updateMembers = [user.id];
@@ -60,23 +58,22 @@ async function checkInTheRoom(id) {
           members: updateMembers,
         },
       }
-    ).then(() => {
-      console.log(`빈 방 DB 업데이트 완료`);
+    ).then(async () => {
+      // 유저 정보 업데이트
+      await User.updateOne(
+        {
+          id: id,
+        },
+        {
+          $set: {
+            roomIdx: emptyRoom.roomIdx,
+          },
+        }
+      ).then(() => {
+        console.log(`${user.id}님 ${emptyRoom.roomIdx}번 방으로 이동 완료`);
+      });
     });
 
-    // 유저 정보 업데이트
-    await User.updateOne(
-      {
-        id: id,
-      },
-      {
-        $set: {
-          roomIdx: emptyRoom.roomIdx,
-        },
-      }
-    ).then(() => {
-      console.log(`${user.id}님 ${emptyRoom.roomIdx}번 방으로 이동 완료`);
-    });
   } else {
     // 빈 방이 없는 경우 -> 새 방 생성
     let newRoomIdx = await Room.count();
@@ -89,23 +86,34 @@ async function checkInTheRoom(id) {
     newRoom.roomIdx = newRoomIdx;
     newRoom.roomMemberCnt = updateMembers.length;
     newRoom.members = updateMembers;
-    await newRoom.save().then(() => {
-      console.log(`| ${user.id} | 빈 방X -> 새 방[${newRoomIdx}] 할당`);
+
+    await newRoom.save().then(async () => {
+      await User.updateOne(
+        {
+          id: id,
+        },
+        {
+          $set: {
+            roomIdx: newRoomIdx,
+          },
+        }
+      ).then(() => {
+        console.log(`${user.id}님 ${newRoomIdx}번 방으로 이동 완료`);
+      });
     });
 
-    await User.updateOne(
-      {
-        id: id,
-      },
-      {
-        $set: {
-          roomIdx: newRoomIdx,
-        },
-      }
-    ).then(() => {
-      console.log(`${user.id}님 ${newRoomIdx}번 방으로 이동 완료`);
-    });
   }
 }
 
-module.exports = { checkOutTheRoom, checkInTheRoom };
+/**유저를 해당 방으로 이동 */
+async function checkInTheRoom(id, roomIdx) {
+  const user = await User.findOne({ id: id }).exec()
+  const room = await Room.findOne({ roomIdx: roomIdx }).exec()
+
+  // 현재 방을 나가고
+  await checkOutTheRoom(id);
+
+
+}
+
+module.exports = { checkOutTheRoom, checkInNewRoom };
