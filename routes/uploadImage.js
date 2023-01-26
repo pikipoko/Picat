@@ -41,7 +41,7 @@ function requestBlurCheck(images) {
 
 /**친구 프로필에 얼굴 유무 확인 */
 async function checkFriendsProfile(friends) {
-  const friendFaceInProfile = []
+  const friendFaceInProfile = [];
   for (let fIdx = 0; fIdx < friends.length; fIdx++) {
     const friendProfile = `users/${friends[fIdx]}.jpg`;
     const detectFriendProfileParam = setDetectParam(friendProfile);
@@ -51,17 +51,14 @@ async function checkFriendsProfile(friends) {
         console.log(err, err.stack);
       } else {
         if (response.FaceDetails.length > 0) {
-          console.log(`프로필 사진에 얼굴이 있음 - ${friends[fIdx]}`)
           // 프사 내 얼굴 O
-          friendFaceInProfile.push(friends[fIdx])
+          friendFaceInProfile.push(friends[fIdx]);
         } else {
-          // 프사 내 얼굴 X
-          console.log(`프로필 사진에 얼굴이 없음 - ${friends[fIdx]}`)
         }
       }
-    })
+    });
   }
-  return friendFaceInProfile
+  return friendFaceInProfile;
 }
 
 /**set S3 detect_face Param */
@@ -91,7 +88,7 @@ function setCompareParam(sourceImageName, targetImageName) {
         Name: targetImageName,
       },
     },
-    SimilarityThreshold: 70,
+    SimilarityThreshold: 90,
   };
 }
 
@@ -104,7 +101,7 @@ function checkIfAllWorkDone(
   imagesURL,
   friendsInImage
 ) {
-  // console.log(`| ${count}/${works} | ${Message} |`);
+  console.log(`| ${count}/${works} | ${Message} |`);
   if (count == works) {
     console.log(`| ${count} 작업 완료 | ${Message} |`);
     res.json({
@@ -129,7 +126,7 @@ async function uploadImage(req, res, next) {
   friends.push(uploaderId);
 
   /**친구들 프로필 사진에 얼굴이 있는지 없는지 검사 */
-  friends = await checkFriendsProfile(friends)
+  friends = await checkFriendsProfile(friends);
 
   const room = await Room.findOne({ roomIdx: uploader.roomIdx });
 
@@ -156,14 +153,10 @@ async function uploadImage(req, res, next) {
       } else {
         //(1)얼굴유무 판단 - O
         if (response.FaceDetails.length > 0) {
-
           // 사진에 얼굴이 있으면, 친구 목록을 순회하면서 친구 얼굴과 비교함.
           for (let fIdx = 0; fIdx < friends.length; fIdx++) {
             const friendProfile = `users/${friends[fIdx]}.jpg`;
-            const compareParams = setCompareParam(
-              friendProfile,
-              targetImgName
-            );
+            const compareParams = setCompareParam(friendProfile, targetImgName);
 
             /**(2) 사진 <-> 프사 얼굴 비교*/
             rekognition.compareFaces(
@@ -176,23 +169,21 @@ async function uploadImage(req, res, next) {
                   // consoleMessage = "얼굴O 친구O"; //(2) 사진 <-> 프사 얼굴 비교 - 친구 O
                   if (response.FaceMatches.length > 0) {
                     response.FaceMatches.forEach(async (data) => {
-                      if (data.Similarity > 90) {
-                        if (
-                          friendsInImage.filter(
-                            (friend) => friend.id == friends[fIdx]
-                          ).length == 0 &&
-                          !room.members.includes(friends[fIdx])
-                        ) {
-                          const friend = await User.findOne({
-                            id: friends[fIdx],
-                          }).exec();
+                      if (
+                        friendsInImage.filter(
+                          (friend) => friend.id == friends[fIdx]
+                        ).length == 0 &&
+                        !room.members.includes(friends[fIdx])
+                      ) {
+                        const friend = await User.findOne({
+                          id: friends[fIdx],
+                        }).exec();
 
-                          friendsInImage.push({
-                            nickname: friend.nickname,
-                            id: friend.id,
-                            picture: friend.picture,
-                          });
-                        }
+                        friendsInImage.push({
+                          nickname: friend.nickname,
+                          id: friend.id,
+                          picture: friend.picture,
+                        });
                       }
                     });
                     await Img.updateOne(
