@@ -86,23 +86,39 @@ function checkIfAllWorkDone(
   Message,
   res,
   imagesURL,
-  friendsInImage
+  friendsInImage,
+  isSend
 ) {
   // console.log(`| ${count}/${works} | ${Message} |`);
-  if (count == works) {
+  if (count == works && !isSend) {
     console.log(`| ${count} 작업 완료 | ${Message} |`);
     res.json({
       url: imagesURL,
       img_cnt: imagesURL.length,
       friends: friendsInImage,
     });
+    return true;
   }
+
+  return isSend;
 }
 
 async function uploadImages(req, res, next) {
   let count = 0;
   const resImages = [];
   const friendsInImage = [];
+  let isSend = false;
+  setTimeout(() => {
+    if (!isSend) {
+      console.log(`시간 다되서 보냄.`)
+      res.json({
+        url: resImages,
+        img_cnt: resImages.length,
+        friends: friendsInImage
+      })
+      isSend = true
+    }
+  }, 25000)
 
   const imagesToUpload = req.files;
   const uploaderId = parseInt(req.body.id);
@@ -126,7 +142,7 @@ async function uploadImages(req, res, next) {
   /*업로드할 이미지 수 만큼 얼굴 탐지 반복 */
   for (let i = 0; i < imagesToUpload.length; i++) {
     let preImage = imagesToUpload[i].location;
-    resImages[i] = preImage;
+    resImages[i] = imagesToUpload[i].location;
 
     const targetImgName = preImage.split("/")[3];
     const detectParam = setDetectParam(targetImgName);
@@ -137,13 +153,14 @@ async function uploadImages(req, res, next) {
         console.log("detect error");
         console.log(err, err.stack);
         count += friends.length;
-        checkIfAllWorkDone(
+        isSend = checkIfAllWorkDone(
           count,
           imagesToUpload.length * friends.length,
           consoleMessage,
           res,
           resImages,
-          friendsInImage
+          friendsInImage,
+          isSend
         );
       } else {
         //(1)얼굴유무 판단 - O
@@ -165,13 +182,14 @@ async function uploadImages(req, res, next) {
                   console.log("compare error");
                   console.log(err);
                   count++;
-                  checkIfAllWorkDone(
+                  isSend = checkIfAllWorkDone(
                     count,
                     imagesToUpload.length * friends.length,
                     consoleMessage,
                     res,
                     resImages,
-                    friendsInImage
+                    friendsInImage,
+                    isSend
                   );
                 } else {
                   if (response.FaceMatches.length > 0) {
@@ -204,25 +222,27 @@ async function uploadImages(req, res, next) {
                     ).then(() => {
                       // consoleMessage = "얼굴O 친구O"; //(2) 사진 <-> 프사 얼굴 비교 - 친구 O
                       count++;
-                      checkIfAllWorkDone(
+                      isSend = checkIfAllWorkDone(
                         count,
                         imagesToUpload.length * friends.length,
                         consoleMessage,
                         res,
                         resImages,
-                        friendsInImage
+                        friendsInImage,
+                        isSend
                       );
                     });
                   } else {
                     // consoleMessage = "얼굴O 친구X"; //(2) 사진 <-> 프사 얼굴 비교 - 친구 X
                     count++;
-                    checkIfAllWorkDone(
+                    isSend = checkIfAllWorkDone(
                       count,
                       imagesToUpload.length * friends.length,
                       consoleMessage,
                       res,
                       resImages,
-                      friendsInImage
+                      friendsInImage,
+                      isSend
                     );
                   }
                 }
@@ -232,13 +252,14 @@ async function uploadImages(req, res, next) {
         } else {
           // consoleMessage = "얼굴X"; //(1)얼굴유무 판단 - X
           count += friends.length;
-          checkIfAllWorkDone(
+          isSend = checkIfAllWorkDone(
             count,
             imagesToUpload.length * friends.length,
             consoleMessage,
             res,
             resImages,
-            friendsInImage
+            friendsInImage,
+            isSend
           );
         }
       }
