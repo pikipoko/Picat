@@ -39,7 +39,7 @@ function requestBlurCheck(images) {
   );
 }
 
-/** */
+/**친구 프로필에 얼굴 유무 확인 */
 async function checkFriendsProfile(friends) {
   const friendFaceInProfile = []
   for (let fIdx = 0; fIdx < friends.length; fIdx++) {
@@ -165,7 +165,7 @@ async function uploadImage(req, res, next) {
               targetImgName
             );
 
-            /**(3) 사진 <-> 프사 얼굴 비교*/
+            /**(2) 사진 <-> 프사 얼굴 비교*/
             rekognition.compareFaces(
               compareParams,
               async function (err, response) {
@@ -173,7 +173,7 @@ async function uploadImage(req, res, next) {
                   console.log("compare error");
                   console.log(err);
                 } else {
-                  // consoleMessage = "얼굴O 친구O"; //(3) 사진 <-> 프사 얼굴 비교 - 친구 O
+                  // consoleMessage = "얼굴O 친구O"; //(2) 사진 <-> 프사 얼굴 비교 - 친구 O
                   if (response.FaceMatches.length > 0) {
                     response.FaceMatches.forEach(async (data) => {
                       if (data.Similarity > 90) {
@@ -199,7 +199,7 @@ async function uploadImage(req, res, next) {
                       { url: preImage },
                       { $push: { users: friends[fIdx] } }
                     ).then(() => {
-                      // consoleMessage = "얼굴O 친구O"; //(3) 사진 <-> 프사 얼굴 비교 - 친구 O
+                      // consoleMessage = "얼굴O 친구O"; //(2) 사진 <-> 프사 얼굴 비교 - 친구 O
                       count++;
                       checkIfAllWorkDone(
                         count,
@@ -211,7 +211,7 @@ async function uploadImage(req, res, next) {
                       );
                     });
                   } else {
-                    // consoleMessage = "얼굴O 친구X"; //(3) 사진 <-> 프사 얼굴 비교 - 친구 X
+                    // consoleMessage = "얼굴O 친구X"; //(2) 사진 <-> 프사 얼굴 비교 - 친구 X
                     count++;
                     checkIfAllWorkDone(
                       count,
