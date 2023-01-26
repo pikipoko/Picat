@@ -1,5 +1,25 @@
+require("dotenv");
+const request = require("request");
 const User = require("../models/User");
 const Img = require("../models/Image");
+
+/**서브 서버에 Blur Check 요청 */
+function requestBlurCheck(images) {
+  console.log(`| ${images.length} | 흐린 사진 판별 작업 요청`);
+  request.post(
+    {
+      url: process.env.BLURCHECK_SERVER,
+      json: { imageURL: images },
+    },
+    (error, response, body) => {
+      if (!error && response.statusCode === 200) {
+        // Print the response from the second server
+        console.log("흐린 사진 판별 서버에서 에러 발생", body);
+        res.send(body);
+      }
+    }
+  );
+}
 
 let blur = async function (req, res, next) {
   const blurId = parseInt(req.query.id);
@@ -21,6 +41,7 @@ let blur = async function (req, res, next) {
     }
   );
 };
+
 let clear = async function (req, res, next) {
   const blurId = parseInt(req.query.id);
   const userRoom = await User.findOne(
@@ -42,4 +63,4 @@ let clear = async function (req, res, next) {
   );
 };
 
-module.exports = { blur, clear };
+module.exports = { blur, clear, requestBlurCheck };
