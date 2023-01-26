@@ -157,6 +157,7 @@ async function uploadImage(req, res, next) {
                           console.log("compare error");
                           console.log(err);
                         } else {
+                          // consoleMessage = "얼굴O 친구O"; //(3) 사진 <-> 프사 얼굴 비교 - 친구 O
                           if (response.FaceMatches.length > 0) {
                             response.FaceMatches.forEach(async (data) => {
                               if (data.Similarity > 90) {
