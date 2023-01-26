@@ -1,10 +1,12 @@
 require("dotenv");
-const request = require("request");
+
 const User = require("../models/User");
 const Img = require("../models/Image");
 const Room = require("../models/Room");
 const AWS = require("aws-sdk");
 const rekognition = new AWS.Rekognition({ region: "ap-northeast-2" });
+
+const { requestBlurCheck } = require("./blur")
 
 /**DB에 이미지 저장 */
 async function saveImagesInDB(images, uploader) {
@@ -16,27 +18,9 @@ async function saveImagesInDB(images, uploader) {
     newImg.url = preImage;
     newImg.users = [];
     newImg.isBlur = false;
-    await newImg.save();
+    await newImg.save().catch((err) => { console.log(`| error in saveImagesInDB | uploader : ${uploader} |${err}`) });
   }
   console.log(`| ${images.length}장 DB 저장 완료 | ${uploader.id} |`);
-}
-
-/**서브 서버에 Blur Check 요청 */
-function requestBlurCheck(images) {
-  console.log(`| ${images.length} | 흐린 사진 판별 작업 요청`);
-  request.post(
-    {
-      url: "http://3.39.184.45:5000/checkBlur",
-      json: { imageURL: images },
-    },
-    (error, response, body) => {
-      if (!error && response.statusCode === 200) {
-        // Print the response from the second server
-        console.log("흐린 사진 판별 서버에서 에러 발생", body);
-        res.send(body);
-      }
-    }
-  );
 }
 
 /**친구 프로필에 얼굴 유무 확인 */
@@ -51,12 +35,12 @@ async function checkFriendsProfile(friends) {
         console.log(err, err.stack);
       } else {
         if (response.FaceDetails.length > 0) {
-          console.log(`프로필 사진에 얼굴이 있음 - ${friends[fIdx]}`)
+          // console.log(`프로필 사진에 얼굴이 있음 - ${friends[fIdx]}`)
           // 프사 내 얼굴 O
           friendFaceInProfile.push(friends[fIdx])
         } else {
           // 프사 내 얼굴 X
-          console.log(`프로필 사진에 얼굴이 없음 - ${friends[fIdx]}`)
+          // console.log(`프로필 사진에 얼굴이 없음 - ${friends[fIdx]}`)
         }
       }
     })
@@ -115,14 +99,14 @@ function checkIfAllWorkDone(
   }
 }
 
-async function uploadImage(req, res, next) {
+async function uploadImages(req, res, next) {
   let count = 0;
   const resImages = [];
   const friendsInImage = [];
 
-  const uploadImages = req.files;
+  const imagesToUpload = req.files;
   const uploaderId = parseInt(req.body.id);
-  let consoleMessage = `| ${uploaderId} | ${uploadImages.length}장 - 얼굴 분류 작업 및 업로드`;
+  let consoleMessage = `| ${uploaderId} | ${imagesToUpload.length}장 - 얼굴 분류 작업 및 업로드`;
 
   const uploader = await User.findOne({ id: uploaderId });
   let friends = uploader.elements;
@@ -134,15 +118,15 @@ async function uploadImage(req, res, next) {
   const room = await Room.findOne({ roomIdx: uploader.roomIdx });
 
   /*DB에 images 먼저 저장*/
-  await saveImagesInDB(uploadImages, uploader);
+  await saveImagesInDB(imagesToUpload, uploader);
 
   /*Blur 서버에 images 전달*/
-  requestBlurCheck(uploadImages);
+  requestBlurCheck(imagesToUpload);
 
   /*업로드할 이미지 수 만큼 얼굴 탐지 반복 */
-  for (let iIdx = 0; iIdx < uploadImages.length; iIdx++) {
-    let preImage = uploadImages[iIdx].location;
-    resImages[iIdx] = preImage;
+  for (let i = 0; i < imagesToUpload.length; i++) {
+    let preImage = imagesToUpload[i].location;
+    resImages[i] = preImage;
 
     const targetImgName = preImage.split("/")[3];
     const detectParam = setDetectParam(targetImgName);
@@ -153,13 +137,21 @@ async function uploadImage(req, res, next) {
         console.log("detect error");
         console.log(err, err.stack);
         count += friends.length;
+        checkIfAllWorkDone(
+          count,
+          imagesToUpload.length * friends.length,
+          consoleMessage,
+          res,
+          resImages,
+          friendsInImage
+        );
       } else {
         //(1)얼굴유무 판단 - O
         if (response.FaceDetails.length > 0) {
 
           // 사진에 얼굴이 있으면, 친구 목록을 순회하면서 친구 얼굴과 비교함.
-          for (let fIdx = 0; fIdx < friends.length; fIdx++) {
-            const friendProfile = `users/${friends[fIdx]}.jpg`;
+          for (let f_i = 0; f_i < friends.length; f_i++) {
+            const friendProfile = `users/${friends[f_i]}.jpg`;
             const compareParams = setCompareParam(
               friendProfile,
               targetImgName
@@ -172,19 +164,30 @@ async function uploadImage(req, res, next) {
                 if (err) {
                   console.log("compare error");
                   console.log(err);
+                  count++;
+                  checkIfAllWorkDone(
+                    count,
+                    imagesToUpload.length * friends.length,
+                    consoleMessage,
+                    res,
+                    resImages,
+                    friendsInImage
+                  );
                 } else {
-                  // consoleMessage = "얼굴O 친구O"; //(2) 사진 <-> 프사 얼굴 비교 - 친구 O
                   if (response.FaceMatches.length > 0) {
+                    // consoleMessage = "얼굴O 친구O"; //(2) 사진 <-> 프사 얼굴 비교 - 친구 O
+
                     response.FaceMatches.forEach(async (data) => {
                       if (data.Similarity > 90) {
                         if (
                           friendsInImage.filter(
-                            (friend) => friend.id == friends[fIdx]
+                            (fInImage) => fInImage.id == friends[f_i]
                           ).length == 0 &&
-                          !room.members.includes(friends[fIdx])
+                          !room.members.includes(friends[f_i])
                         ) {
+                          /**친구 프로필 사진과 사진 속 얼굴의 유사도가 90%가 넘고, */
                           const friend = await User.findOne({
-                            id: friends[fIdx],
+                            id: friends[f_i],
                           }).exec();
 
                           friendsInImage.push({
@@ -197,13 +200,13 @@ async function uploadImage(req, res, next) {
                     });
                     await Img.updateOne(
                       { url: preImage },
-                      { $push: { users: friends[fIdx] } }
+                      { $push: { users: friends[f_i] } }
                     ).then(() => {
                       // consoleMessage = "얼굴O 친구O"; //(2) 사진 <-> 프사 얼굴 비교 - 친구 O
                       count++;
                       checkIfAllWorkDone(
                         count,
-                        uploadImages.length * friends.length,
+                        imagesToUpload.length * friends.length,
                         consoleMessage,
                         res,
                         resImages,
@@ -215,7 +218,7 @@ async function uploadImage(req, res, next) {
                     count++;
                     checkIfAllWorkDone(
                       count,
-                      uploadImages.length * friends.length,
+                      imagesToUpload.length * friends.length,
                       consoleMessage,
                       res,
                       resImages,
@@ -231,7 +234,7 @@ async function uploadImage(req, res, next) {
           count += friends.length;
           checkIfAllWorkDone(
             count,
-            uploadImages.length * friends.length,
+            imagesToUpload.length * friends.length,
             consoleMessage,
             res,
             resImages,
@@ -243,4 +246,4 @@ async function uploadImage(req, res, next) {
   }
 }
 
-module.exports = { uploadImage };
+module.exports = { uploadImages };

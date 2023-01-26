@@ -18,7 +18,7 @@ const port = 5000;
 /**routes */
 const { login, uploadImageToS3 } = require("./routes/login");
 const { inviteFriends, sendPushAlarm } = require("./routes/friends");
-const { uploadImage } = require("./routes/uploadImage");
+const { uploadImages } = require("./routes/uploadImages");
 const { filter } = require("./routes/filter");
 const { blur, clear } = require("./routes/blur");
 
@@ -31,7 +31,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(allowCrossDomain);
 
 /**라우터 */
-app.post("/image", upload.array("image"), uploadImage); /**이미지 업로드 */
+app.post("/image", upload.array("image"), uploadImages); /**이미지 업로드 */
 app.post("/app/users/kakao", login); /**카카오톡을 통한 로그인 */
 app.get("/filter", filter); /**필터 요청 */
 app.get("/blur", blur); /**흐린사진 요청 */
