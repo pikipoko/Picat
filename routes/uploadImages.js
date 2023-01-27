@@ -30,22 +30,24 @@ async function checkFriendsProfile(friends) {
   for (let fIdx = 0; fIdx < friends.length; fIdx++) {
     const friendProfile = `users/${friends[fIdx]}.jpg`;
     const detectFriendProfileParam = setDetectParam(friendProfile);
-    rekognition.detectFaces(detectFriendProfileParam, function (err, response) {
-      if (err) {
-        console.log(`friend face detect error - ${friends[fIdx]}`);
-        console.log(err, err.stack);
+    try {
+      const response = await rekognition
+        .detectFaces(detectFriendProfileParam)
+        .promise();
+      if (response.FaceDetails.length > 0) {
+        // console.log(`프로필 사진에 얼굴이 있음 - ${friends[fIdx]}`);
+        // 프사 내 얼굴 O
+        friendFaceInProfile.push(friends[fIdx]);
       } else {
-        if (response.FaceDetails.length > 0) {
-          // console.log(`프로필 사진에 얼굴이 있음 - ${friends[fIdx]}`)
-          // 프사 내 얼굴 O
-          friendFaceInProfile.push(friends[fIdx]);
-        } else {
-          // 프사 내 얼굴 X
-          // console.log(`프로필 사진에 얼굴이 없음 - ${friends[fIdx]}`)
-        }
+        // 프사 내 얼굴 X
+        // console.log(`프로필 사진에 얼굴이 없음 - ${friends[fIdx]}`);
       }
-    });
+    } catch (err) {
+      console.log(`friend face detect error - ${friends[fIdx]}`);
+      console.log(err);
+    }
   }
+  console.log(`${friendFaceInProfile.length}명의 친구 얼굴 감지완료`);
   return friendFaceInProfile;
 }
 
@@ -255,6 +257,7 @@ async function uploadImages(req, res, next) {
         } else {
           // consoleMessage = "얼굴X"; //(1)얼굴유무 판단 - X
           count += friends.length;
+          // console.log(`>>>>>>> count : ${count}`);
           isSend = checkIfAllWorkDone(
             count,
             imagesToUpload.length * friends.length,
