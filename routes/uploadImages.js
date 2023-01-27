@@ -6,26 +6,27 @@ const Room = require("../models/Room");
 const AWS = require("aws-sdk");
 const rekognition = new AWS.Rekognition({ region: "ap-northeast-2" });
 
-const { requestBlurCheck } = require("./blur")
+const { requestBlurCheck } = require("./blur");
 
 /**DB에 이미지 저장 */
 async function saveImagesInDB(images, uploader) {
   for (let i = 0; i < images.length; i++) {
-    let preImage = images[i].location;
     const newImg = new Img();
     newImg.roomIdx = uploader.roomIdx;
     newImg.id = uploader.id;
-    newImg.url = preImage;
+    newImg.url = images[i].location;
     newImg.users = [];
     newImg.isBlur = false;
-    await newImg.save().catch((err) => { console.log(`| error in saveImagesInDB | uploader : ${uploader} |${err}`) });
+    await newImg.save().catch((err) => {
+      console.log(`| error in saveImagesInDB | uploader : ${uploader} |${err}`);
+    });
   }
   console.log(`| ${images.length}장 DB 저장 완료 | ${uploader.id} |`);
 }
 
 /**친구 프로필에 얼굴 유무 확인 */
 async function checkFriendsProfile(friends) {
-  const friendFaceInProfile = []
+  const friendFaceInProfile = [];
   for (let fIdx = 0; fIdx < friends.length; fIdx++) {
     const friendProfile = `users/${friends[fIdx]}.jpg`;
     const detectFriendProfileParam = setDetectParam(friendProfile);
@@ -37,15 +38,15 @@ async function checkFriendsProfile(friends) {
         if (response.FaceDetails.length > 0) {
           // console.log(`프로필 사진에 얼굴이 있음 - ${friends[fIdx]}`)
           // 프사 내 얼굴 O
-          friendFaceInProfile.push(friends[fIdx])
+          friendFaceInProfile.push(friends[fIdx]);
         } else {
           // 프사 내 얼굴 X
           // console.log(`프로필 사진에 얼굴이 없음 - ${friends[fIdx]}`)
         }
       }
-    })
+    });
   }
-  return friendFaceInProfile
+  return friendFaceInProfile;
 }
 
 /**set S3 detect_face Param */
@@ -108,17 +109,6 @@ async function uploadImages(req, res, next) {
   const resImages = [];
   const friendsInImage = [];
   let isSend = false;
-  setTimeout(() => {
-    if (!isSend) {
-      console.log(`시간 다되서 보냄.`)
-      res.json({
-        url: resImages,
-        img_cnt: resImages.length,
-        friends: friendsInImage
-      })
-      isSend = true
-    }
-  }, 25000)
 
   const imagesToUpload = req.files;
   const uploaderId = parseInt(req.body.id);
@@ -129,7 +119,7 @@ async function uploadImages(req, res, next) {
   friends.push(uploaderId);
 
   /**친구들 프로필 사진에 얼굴이 있는지 없는지 검사 */
-  friends = await checkFriendsProfile(friends)
+  friends = await checkFriendsProfile(friends);
 
   const room = await Room.findOne({ roomIdx: uploader.roomIdx });
 
@@ -138,13 +128,27 @@ async function uploadImages(req, res, next) {
 
   /*Blur 서버에 images 전달*/
   requestBlurCheck(imagesToUpload);
-
+  for (let i = 0; i < imagesToUpload.length; i++) {
+    resImages[i] = imagesToUpload[i].location;
+  }
+  setTimeout(() => {
+    if (!isSend) {
+      console.log(
+        `${count}/${imagesToUpload.length * friends.length} - 시간 다되서 보냄.`
+      );
+      res.json({
+        url: resImages,
+        img_cnt: resImages.length,
+        friends: friendsInImage,
+      });
+      isSend = true;
+    }
+  }, 20000);
   /*업로드할 이미지 수 만큼 얼굴 탐지 반복 */
   for (let i = 0; i < imagesToUpload.length; i++) {
-    let preImage = imagesToUpload[i].location;
-    resImages[i] = imagesToUpload[i].location;
+    // resImages[i] = imagesToUpload[i].location;
 
-    const targetImgName = preImage.split("/")[3];
+    const targetImgName = imagesToUpload[i].location.split("/")[3];
     const detectParam = setDetectParam(targetImgName);
 
     /**(1)얼굴유무 판단 */
@@ -165,14 +169,10 @@ async function uploadImages(req, res, next) {
       } else {
         //(1)얼굴유무 판단 - O
         if (response.FaceDetails.length > 0) {
-
           // 사진에 얼굴이 있으면, 친구 목록을 순회하면서 친구 얼굴과 비교함.
           for (let f_i = 0; f_i < friends.length; f_i++) {
             const friendProfile = `users/${friends[f_i]}.jpg`;
-            const compareParams = setCompareParam(
-              friendProfile,
-              targetImgName
-            );
+            const compareParams = setCompareParam(friendProfile, targetImgName);
 
             /**(2) 사진 <-> 프사 얼굴 비교*/
             rekognition.compareFaces(
@@ -198,16 +198,19 @@ async function uploadImages(req, res, next) {
                     response.FaceMatches.forEach(async (data) => {
                       if (data.Similarity > 90) {
                         if (
-                          friendsInImage.filter(
-                            (fInImage) => fInImage.id == friends[f_i]
-                          ).length == 0 &&
+                          // friendsInImage.filter(
+                          //   (fInImage) => fInImage.id == friends[f_i]
+                          // ).length == 0 &&
+                          !friendsInImage.find(
+                            (obj) => obj.id === friends[f_i]
+                          ) &&
                           !room.members.includes(friends[f_i])
                         ) {
                           /**친구 프로필 사진과 사진 속 얼굴의 유사도가 90%가 넘고, */
                           const friend = await User.findOne({
                             id: friends[f_i],
                           }).exec();
-
+                          console.log(`${friend.nickname}`);
                           friendsInImage.push({
                             nickname: friend.nickname,
                             id: friend.id,
@@ -217,7 +220,7 @@ async function uploadImages(req, res, next) {
                       }
                     });
                     await Img.updateOne(
-                      { url: preImage },
+                      { url: imagesToUpload[i].location },
                       { $push: { users: friends[f_i] } }
                     ).then(() => {
                       // consoleMessage = "얼굴O 친구O"; //(2) 사진 <-> 프사 얼굴 비교 - 친구 O
