@@ -8,9 +8,13 @@
 
 ## 백엔드
 
+### Skills
+
 #### Javascript, Python
 
 #### Node.js + Express, AWS Rekognition, S3, EC2, MongoDB Atlas, OpenCV
+
+### 구현
 
 - 서버 구축 및 배포
 
@@ -31,7 +35,7 @@
 
   - FCM 서비스 이용
 
-#### 성능 개선
+### 성능 개선
 
 - 여러 얼굴인식 라이브러리 적용 및 테스트를 통한 얼굴 분류 작업 속도 개선
 
