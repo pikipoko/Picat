@@ -6,7 +6,7 @@
 
 ![Group 237](https://user-images.githubusercontent.com/69448918/215417167-6d308102-4bf7-4fda-84c1-fcedddd0e129.png)
 
-## 맡은 역할 - 백엔드
+## 백엔드
 
 #### Javascript, Python
 
