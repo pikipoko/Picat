@@ -52,7 +52,7 @@ https://youtu.be/M4QCKSfNTdQ
 
 ---
 
-<img src = "https://user-images.githubusercontent.com/59064298/215989193-2c6c51af-18fc-405f-836e-b65ded349540.PNG" width="700px">
+<img src = "https://user-images.githubusercontent.com/59064298/215989193-2c6c51af-18fc-405f-836e-b65ded349540.PNG" width="800px">
 
 ---
 
