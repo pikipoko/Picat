@@ -45,13 +45,21 @@ https://youtu.be/M4QCKSfNTdQ
 ## 기능 구현 과정
 
 <img src = "https://user-images.githubusercontent.com/59064298/215990999-f283ee1b-03f2-425d-a711-64d9d9cfd421.png" width="900px">
+
 ---
+
 <img src = "https://user-images.githubusercontent.com/59064298/215989145-a2378339-7fbd-46bb-8993-2baa5ed19f2b.png" width="700px">
+
 ---
+
 <img src = "https://user-images.githubusercontent.com/59064298/215989193-2c6c51af-18fc-405f-836e-b65ded349540.PNG" width="700px">
+
 ---
+
 <img src = "https://user-images.githubusercontent.com/59064298/215991407-c2f28b55-567b-43b3-a5e2-d144036d45ae.png" width="600px">
+
 ---
+
 <img src = "https://user-images.githubusercontent.com/59064298/215991463-16ad23b4-84e3-4256-9afd-6a6be44369c8.png" width="700px">
 
 ## 서비스 구조도
