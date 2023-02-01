@@ -10,9 +10,9 @@
 
 ### Skills
 
-####    Javascript, Python
+#### Javascript, Python
 
-####    Node.js + Express, AWS Rekognition, S3, EC2, MongoDB Atlas, OpenCV
+#### Node.js + Express, AWS Rekognition, S3, EC2, MongoDB Atlas, OpenCV
 
 ### 구현
 
