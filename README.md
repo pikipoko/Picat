@@ -44,10 +44,10 @@ https://youtu.be/M4QCKSfNTdQ
 
 ## 기능 구현 과정
 
-![얼굴인식_라이브러리_선택과정](https://user-images.githubusercontent.com/59064298/215989060-862d4907-f526-4726-abd6-d760981a2d3f.PNG){: width="500"}
-![얼굴_분류_결과_처리_이슈_해결과정](https://user-images.githubusercontent.com/59064298/215989145-a2378339-7fbd-46bb-8993-2baa5ed19f2b.png){: width="500"}
-![얼굴인식 결과 처리 로직](https://user-images.githubusercontent.com/59064298/215989193-2c6c51af-18fc-405f-836e-b65ded349540.PNG){: width="500"}
-![흐린사진판별작업중이슈해결](https://user-images.githubusercontent.com/59064298/215989308-3524b2c4-4766-469c-b782-5a65709e68e4.PNG){: width="500"}
+![얼굴인식_라이브러리_선택과정](https://user-images.githubusercontent.com/59064298/215989060-862d4907-f526-4726-abd6-d760981a2d3f.PNG){: width="500" height=""}
+![얼굴_분류_결과_처리_이슈_해결과정](https://user-images.githubusercontent.com/59064298/215989145-a2378339-7fbd-46bb-8993-2baa5ed19f2b.png){: width="500" height=""}
+![얼굴인식 결과 처리 로직](https://user-images.githubusercontent.com/59064298/215989193-2c6c51af-18fc-405f-836e-b65ded349540.PNG){: width="500" height=""}
+![흐린사진판별작업중이슈해결](https://user-images.githubusercontent.com/59064298/215989308-3524b2c4-4766-469c-b782-5a65709e68e4.PNG){: width="500" height=""}
 
 ![DB](https://user-images.githubusercontent.com/59064298/215989336-c027f28f-8677-4710-92a8-38886e774294.PNG)
 
