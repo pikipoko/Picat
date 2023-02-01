@@ -92,7 +92,6 @@ function checkIfAllWorkDone(
   friendsInImage,
   isSend
 ) {
-  // console.log(`| ${count}/${works} | ${Message} |`);
   if (count == works && !isSend) {
     console.log(`| ${count} 작업 완료 | ${Message} |`);
     res.json({
@@ -102,7 +101,6 @@ function checkIfAllWorkDone(
     });
     return true;
   }
-
   return isSend;
 }
 
@@ -136,7 +134,7 @@ async function uploadImages(req, res, next) {
   setTimeout(() => {
     if (!isSend) {
       console.log(
-        `${count}/${imagesToUpload.length * friends.length} - 시간 다되서 보냄.`
+        `${count}/${imagesToUpload.length * friends.length} - timeout.`
       );
       res.json({
         url: resImages,
@@ -149,7 +147,6 @@ async function uploadImages(req, res, next) {
   /*업로드할 이미지 수 만큼 얼굴 탐지 반복 */
   for (let i = 0; i < imagesToUpload.length; i++) {
     // resImages[i] = imagesToUpload[i].location;
-
     const targetImgName = imagesToUpload[i].location.split("/")[3];
     const detectParam = setDetectParam(targetImgName);
 
@@ -175,7 +172,6 @@ async function uploadImages(req, res, next) {
           for (let f_i = 0; f_i < friends.length; f_i++) {
             const friendProfile = `users/${friends[f_i]}.jpg`;
             const compareParams = setCompareParam(friendProfile, targetImgName);
-
             /**(2) 사진 <-> 프사 얼굴 비교*/
             rekognition.compareFaces(
               compareParams,
@@ -196,13 +192,9 @@ async function uploadImages(req, res, next) {
                 } else {
                   if (response.FaceMatches.length > 0) {
                     // consoleMessage = "얼굴O 친구O"; //(2) 사진 <-> 프사 얼굴 비교 - 친구 O
-
                     response.FaceMatches.forEach(async (data) => {
                       if (data.Similarity > 90) {
                         if (
-                          // friendsInImage.filter(
-                          //   (fInImage) => fInImage.id == friends[f_i]
-                          // ).length == 0 &&
                           !friendsInImage.find(
                             (obj) => obj.id === friends[f_i]
                           ) &&
